@@ -1,0 +1,627 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { createRoot } from 'react-dom/client';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './shadcn/ui/dialog';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from './shadcn/ui/popover';
+import { Button } from './shadcn/ui/button';
+import { Input } from './shadcn/ui/input';
+import { Label } from './shadcn/ui/label';
+
+// Mock shadcn components - they would normally be imported from 'shadcn/ui'
+const shadcn = {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  Button,
+  Input,
+  Label,
+};
+
+// CSS for the App
+const AppCSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+  body {
+    font-family: 'Inter', sans-serif;
+  }
+  .animate-pulse {
+    animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .5; }
+  }
+  .log-item {
+    transition: opacity 0.5s ease-in-out;
+  }
+`;
+
+// Helper function to show alerts without blocking the UI
+const useMessageBox = () => {
+  const [modalState, setModalState] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onClose: () => {},
+  });
+
+  const showMessage = (title, message, onClose = () => {}) => {
+    setModalState({
+      isOpen: true,
+      title,
+      message,
+      onClose: () => {
+        setModalState((prev) => ({ ...prev, isOpen: false }));
+        onClose();
+      },
+    });
+  };
+
+  const MessageBox = () => (
+    <shadcn.Dialog open={modalState.isOpen}>
+      <shadcn.DialogContent className="sm:max-w-[425px]">
+        <shadcn.DialogHeader>
+          <shadcn.DialogTitle>{modalState.title}</shadcn.DialogTitle>
+        </shadcn.DialogHeader>
+        <shadcn.DialogDescription>{modalState.message}</shadcn.DialogDescription>
+        <shadcn.DialogFooter>
+          <shadcn.Button onClick={modalState.onClose}>OK</shadcn.Button>
+        </shadcn.DialogFooter>
+      </shadcn.DialogContent>
+    </shadcn.Dialog>
+  );
+
+  return [showMessage, MessageBox];
+};
+
+// Data configurations
+const configs = {
+    locations: {
+        downtown: { name: 'Downtown', rent: 15000, customerTraffic: 1.5, competition: 1.2 },
+        suburbs: { name: 'Suburbs', rent: 5000, customerTraffic: 0.8, competition: 0.5 },
+        college: { name: 'College Campus', rent: 10000, customerTraffic: 1.2, competition: 1.0 },
+    },
+    equipment: {
+        basic: { name: 'Basic', cost: 10000, quality: 0.5 },
+        standard: { name: 'Standard', cost: 25000, quality: 0.8 },
+        pro: { name: 'Pro', cost: 40000, quality: 1.2 },
+    },
+    suppliers: {
+        budget: { name: 'Budget Beans', costPerCup: 1.0, qualityFactor: 0.5 },
+        premium: { name: 'Premium Blend', costPerCup: 2.0, qualityFactor: 1.0 },
+        gourmet: { name: 'Gourmet Reserve', costPerCup: 3.0, qualityFactor: 1.5 },
+    },
+    menuItems: [
+        { id: 'drip', name: 'Drip Coffee', baseCost: 1.5, basePrice: 3, qualityFactor: 0.8 },
+        { id: 'latte', name: 'Latte', baseCost: 2.5, basePrice: 5, qualityFactor: 1.2 },
+        { id: 'specialty', name: 'Specialty Drink', baseCost: 3.5, basePrice: 7, qualityFactor: 1.5 },
+    ],
+    baristaSkills: ['Speed', 'Quality', 'Charm'],
+};
+
+const weatherConditions = ['Sunny', 'Rainy', 'Cloudy'];
+
+const App = () => {
+    const [gameState, setGameState] = useState({
+        phase: 'planning', // 'planning', 'running', 'gameover'
+        money: 50000,
+        initialCapital: 50000,
+        day: 0,
+        month: 0,
+        customers: 0,
+        reputation: 0.5,
+        baristas: [],
+        equipment: 'basic',
+        rent: 0,
+        menuPrices: { drip: 3, latte: 5, specialty: 7 },
+        log: [],
+        isGameOver: false,
+        businessPlan: {},
+        inventory: { beans: 500, milk: 500 }, // in cups
+        loan: null,
+        weather: 'Sunny',
+        equipmentHealth: 1.0,
+    });
+
+    const [planningState, setPlanningState] = useState({
+        step: 1,
+        shopName: 'The Daily Grind',
+        location: 'downtown',
+        equipment: 'basic',
+        supplier: 'budget',
+        baristaCount: 1,
+        marketingBudget: 1000,
+    });
+
+    const [showMessage, MessageBox] = useMessageBox();
+
+    const gameInterval = useRef(null);
+
+    // --- Planning Phase Logic ---
+    const updateStep = (newStep) => {
+        setPlanningState((prev) => ({ ...prev, step: newStep }));
+    };
+
+    const handlePlanFinalization = () => {
+        const plan = planningState;
+        const equipmentConfig = configs.equipment[plan.equipment];
+        const upfrontCost = equipmentConfig.cost + plan.baristaCount * 2500 + plan.marketingBudget;
+
+        if (gameState.initialCapital - upfrontCost < 0) {
+            showMessage("Not Enough Capital", "Your upfront costs exceed your starting capital. Please adjust your business plan.");
+            return;
+        }
+
+        const newBaristas = Array.from({ length: plan.baristaCount }, (_, i) => ({
+            id: i,
+            morale: 1.0,
+            salary: 2500,
+            skills: {
+                speed: Math.random() * 0.5 + 0.5, // 0.5 to 1.0
+                quality: Math.random() * 0.5 + 0.5,
+            },
+        }));
+
+        setGameState((prev) => ({
+            ...prev,
+            phase: 'running',
+            money: prev.initialCapital - upfrontCost,
+            rent: configs.locations[plan.location].rent,
+            baristas: newBaristas,
+            equipment: plan.equipment,
+            reputation: (equipmentConfig.quality + configs.suppliers[plan.supplier].qualityFactor) / 2,
+            businessPlan: {
+                ...plan,
+                upfrontCost,
+                locationConfig: configs.locations[plan.location],
+                equipmentConfig: equipmentConfig,
+                supplierConfig: configs.suppliers[plan.supplier],
+            },
+        }));
+    };
+
+    // --- Running Phase Logic ---
+    useEffect(() => {
+        if (gameState.phase === 'running') {
+            gameInterval.current = setInterval(gameLoop, 1500); // Day = 1.5s
+            return () => clearInterval(gameInterval.current);
+        }
+    }, [gameState.phase]);
+
+    const addLog = (message, color = 'text-gray-600') => {
+        setGameState((prev) => ({
+            ...prev,
+            log: [{ message, color, day: prev.day }, ...prev.log].slice(0, 20),
+        }));
+    };
+
+    const endGame = (message) => {
+        clearInterval(gameInterval.current);
+        setGameState((prev) => ({ ...prev, isGameOver: true, phase: 'gameover' }));
+        showMessage("Game Over", message, () => window.location.reload());
+    };
+
+    const handleRandomEvent = () => {
+      const eventChance = Math.random();
+      if (eventChance < 0.1) { // 10% chance per day
+        const events = [
+          { type: 'positive', message: 'A local food blogger gave you a great review! Reputation boosted!', action: () => {
+            setGameState(prev => ({ ...prev, reputation: Math.min(1.0, prev.reputation + 0.05) }));
+            addLog("A popular food blogger posted a rave review of your shop! Reputation boosted!", 'text-green-600');
+          }},
+          { type: 'negative', message: 'Oh no! Your espresso machine broke down. Repairs will cost $5,000.', action: () => {
+            setGameState(prev => ({ ...prev, money: prev.money - 5000, equipmentHealth: 0.5 }));
+            addLog("Equipment breakdown! Repairs cost $5,000. Your equipment health is now 50%.", 'text-red-600');
+          }},
+          { type: 'choice', message: 'A local competitor is offering a new deal. What do you do?', options: [
+            { text: 'Ignore it', action: () => addLog("You ignored the competitor. Your reputation took a small hit.", 'text-yellow-600') },
+            { text: 'Lower prices to compete', action: () => {
+              setGameState(prev => ({ ...prev, reputation: Math.max(0.1, prev.reputation - 0.03) }));
+              addLog("You tried to compete, but it hurt your profits. Reputation slightly decreased.", 'text-red-600');
+            }},
+          ]},
+        ];
+
+        const event = events[Math.floor(Math.random() * events.length)];
+        if (event.type === 'choice') {
+          showMessage(event.message, `Choose one of the following options: \n1. ${event.options[0].text}\n2. ${event.options[1].text}`, () => {});
+          // In a real implementation, this would require a more complex modal with button handlers.
+        } else {
+          event.action();
+        }
+      }
+    };
+
+    const gameLoop = () => {
+        setGameState((prev) => {
+            if (prev.isGameOver) return prev;
+            
+            const day = prev.day + 1;
+            const newMonth = Math.floor(day / 30);
+            const isMonthEnd = day % 30 === 0;
+
+            // Monthly expenses
+            if (isMonthEnd) {
+                const totalMonthlyExpenses = prev.rent + (prev.loan ? prev.loan.payment : 0);
+                const newMoney = prev.money - totalMonthlyExpenses;
+                addLog(`End of Month ${newMonth}: Paid rent ($${prev.rent}) and loan payments ($${prev.loan ? prev.loan.payment : 0}). Total: $${totalMonthlyExpenses}.`, 'text-red-600');
+                if (newMoney <= 0) {
+                    endGame(`You ran out of money at the end of the month! Your shop has closed.`);
+                }
+            }
+
+            // Natural decay
+            const newBaristas = prev.baristas.map(b => ({ ...b, morale: Math.max(0, b.morale - 0.005) }));
+            const newEquipmentHealth = Math.max(0, prev.equipmentHealth - 0.005);
+            
+            // Random events
+            handleRandomEvent();
+            
+            // Generate weather and day of the week
+            const newWeather = weatherConditions[Math.floor(Math.random() * weatherConditions.length)];
+            const isWeekend = (day % 7 === 6 || day % 7 === 0);
+
+            // Calculate daily income
+            const { locationConfig, equipmentConfig, supplierConfig } = prev.businessPlan;
+            let dailyTraffic = (prev.customers === 0 ? prev.businessPlan.marketingBudget / 50 : prev.customers) * locationConfig.customerTraffic;
+            
+            if (isWeekend) dailyTraffic *= 1.5;
+            if (newWeather === 'Rainy') dailyTraffic *= 1.2;
+            
+            let customersToday = Math.floor(dailyTraffic * prev.reputation * (1 - locationConfig.competition/10));
+            
+            // Inventory & sales logic
+            let revenue = 0;
+            let totalIngredientCosts = 0;
+            let servedCustomers = 0;
+
+            const drinksToSell = Math.min(customersToday, prev.inventory.beans, prev.inventory.milk);
+            
+            if (drinksToSell > 0) {
+                servedCustomers = drinksToSell;
+                
+                const sales = { drip: 0, latte: 0, specialty: 0 };
+                const totalQuality = prev.baristas.reduce((sum, b) => sum + b.skills.quality, 0);
+                const totalSpeed = prev.baristas.reduce((sum, b) => sum + b.skills.speed, 0);
+                const averageMorale = prev.baristas.length > 0 ? prev.baristas.reduce((sum, b) => sum + b.morale, 0) / prev.baristas.length : 0;
+                
+                // Simulate customer choice based on quality
+                const qualityFactors = {
+                  drip: configs.menuItems[0].qualityFactor,
+                  latte: configs.menuItems[1].qualityFactor,
+                  specialty: configs.menuItems[2].qualityFactor,
+                };
+
+                for(let i = 0; i < servedCustomers; i++) {
+                    const choice = Math.random();
+                    if (choice < 0.4) sales.drip++;
+                    else if (choice < 0.8) sales.latte++;
+                    else sales.specialty++;
+                }
+
+                revenue = (sales.drip * prev.menuPrices.drip) + (sales.latte * prev.menuPrices.latte) + (sales.specialty * prev.menuPrices.specialty);
+                totalIngredientCosts = (sales.drip * (supplierConfig.costPerCup)) + (sales.latte * (supplierConfig.costPerCup + 1)) + (sales.specialty * (supplierConfig.costPerCup + 2));
+            }
+
+            const dailyProfit = revenue - totalIngredientCosts;
+            const newMoney = prev.money + dailyProfit;
+
+            // Update reputation
+            const qualityFactor = (equipmentConfig.quality + supplierConfig.qualityFactor) / 2;
+            const moraleFactor = prev.baristas.reduce((sum, b) => sum + b.morale, 0) / (prev.baristas.length || 1);
+            const newReputation = Math.max(0.1, Math.min(1.0, prev.reputation + ((qualityFactor * moraleFactor) - prev.reputation) * 0.01));
+
+            // Log daily summary
+            addLog(`Served ${servedCustomers} customers. Daily revenue: $${revenue.toFixed(2)}. Profit: $${dailyProfit.toFixed(2)}.`, dailyProfit > 0 ? 'text-green-600' : 'text-red-600');
+
+            // Check for game over
+            if (newMoney <= 0) {
+                endGame(`You ran out of money on day ${day}! Your coffee shop has closed.`);
+            } else if (prev.customers >= 100000) {
+                endGame(`Congratulations! You reached 100,000 customers in ${day} days and built a coffee empire! You win!`);
+            }
+
+            return {
+                ...prev,
+                day,
+                month: newMonth,
+                money: newMoney,
+                customers: prev.customers + Math.floor(servedCustomers * 0.1),
+                reputation: newReputation,
+                inventory: {
+                    beans: prev.inventory.beans - servedCustomers,
+                    milk: prev.inventory.milk - (servedCustomers * 0.5)
+                },
+                baristas: newBaristas,
+                equipmentHealth: newEquipmentHealth,
+                weather: newWeather,
+            };
+        });
+    };
+
+    // Action button handlers
+    const handleAction = (actionType) => {
+      setGameState(prev => {
+        let newGameState = { ...prev };
+        switch (actionType) {
+          case 'market':
+            if (newGameState.money >= 1000) {
+              newGameState.money -= 1000;
+              newGameState.customers += Math.floor(Math.random() * 1000) + 200;
+              addLog("You ran a marketing campaign and gained new customers!", 'text-blue-600');
+            } else { showMessage("Not Enough Money", "You don't have enough cash for a marketing campaign."); }
+            break;
+          case 'hire':
+            if (newGameState.money >= 2500) {
+              newGameState.money -= 2500;
+              const newBarista = {
+                id: newGameState.baristas.length,
+                morale: 1.0,
+                salary: 2500,
+                skills: { speed: Math.random() * 0.5 + 0.5, quality: Math.random() * 0.5 + 0.5 },
+              };
+              newGameState.baristas = [...newGameState.baristas, newBarista];
+              addLog("You hired a new barista! Service speed should improve.", 'text-indigo-600');
+            } else { showMessage("Not Enough Money", "You don't have enough cash to hire a new barista."); }
+            break;
+          case 'upgrade':
+            if (newGameState.equipment === 'basic' && newGameState.money >= 20000) {
+              newGameState.money -= 20000;
+              newGameState.equipment = 'standard';
+              addLog('You upgraded your equipment to Standard!', 'text-yellow-600');
+            } else if (newGameState.equipment === 'standard' && newGameState.money >= 30000) {
+              newGameState.money -= 30000;
+              newGameState.equipment = 'pro';
+              addLog('You upgraded to top-of-the-line Pro equipment!', 'text-yellow-600');
+            } else { showMessage("Not Enough Money", "You can't afford the next equipment upgrade."); }
+            break;
+          case 'buy_inventory':
+            const beansCost = 500;
+            const milkCost = 300;
+            if (newGameState.money >= beansCost + milkCost) {
+              newGameState.money -= (beansCost + milkCost);
+              newGameState.inventory.beans += 500;
+              newGameState.inventory.milk += 500;
+              addLog('You bought 500 cups of beans and 500 cups of milk.', 'text-green-600');
+            } else { showMessage("Not Enough Money", "You don't have enough cash to buy more inventory."); }
+            break;
+          case 'take_loan':
+            if (!newGameState.loan) {
+              newGameState.loan = { amount: 10000, payment: 1000 };
+              newGameState.money += 10000;
+              addLog('You took out a $10,000 loan with a $1,000 monthly payment.', 'text-green-600');
+            } else { showMessage("Already have a loan", "You can only have one loan at a time."); }
+            break;
+        }
+        return newGameState;
+      });
+    };
+    
+    const handlePriceChange = (item, newPrice) => {
+      setGameState(prev => {
+        const newMenuPrices = { ...prev.menuPrices, [item]: newPrice };
+        addLog(`You adjusted the price of ${configs.menuItems.find(i => i.id === item).name} to $${newPrice}.`, 'text-teal-600');
+        return { ...prev, menuPrices: newMenuPrices };
+      });
+    };
+
+    // --- Rendering Logic ---
+    const renderPlanningPhase = () => (
+      <div className="flex flex-col gap-6">
+        <h2 className="text-2xl font-semibold text-gray-700 text-center mb-4">Phase 1: Build Your Business Plan</h2>
+        <div className="flex justify-center items-center gap-2 mb-6">
+          {[1, 2, 3, 4].map(step => (
+            <div key={step} className={`w-4 h-4 rounded-full step-indicator ${planningState.step === step ? 'bg-indigo-500' : planningState.step > step ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+          ))}
+        </div>
+        
+        {planningState.step === 1 && (
+          <div className="space-y-6">
+            <Label className="block text-lg font-medium text-gray-700">Shop Name</Label>
+            <Input type="text" value={planningState.shopName} onChange={e => setPlanningState(p => ({ ...p, shopName: e.target.value }))} placeholder="e.g., The Daily Grind" />
+            <Label className="block text-lg font-medium text-gray-700">Location</Label>
+            <select className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" value={planningState.location} onChange={e => setPlanningState(p => ({ ...p, location: e.target.value }))}>
+              <option value="downtown">$15,000 Rent/Month (High Traffic)</option>
+              <option value="suburbs">$5,000 Rent/Month (Moderate Traffic)</option>
+              <option value="college">$10,000 Rent/Month (High Student Traffic)</option>
+            </select>
+            <Button onClick={() => updateStep(2)} className="w-full">Next</Button>
+          </div>
+        )}
+        
+        {planningState.step === 2 && (
+          <div className="space-y-6">
+            <Label className="block text-lg font-medium text-gray-700">Equipment</Label>
+            <select className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" value={planningState.equipment} onChange={e => setPlanningState(p => ({ ...p, equipment: e.target.value }))}>
+              <option value="basic">$10,000 (Slow, Low Quality)</option>
+              <option value="standard">$25,000 (Average Speed, Good Quality)</option>
+              <option value="pro">$40,000 (Fast, High Quality)</option>
+            </select>
+            <Label className="block text-lg font-medium text-gray-700">Coffee Bean Supplier</Label>
+            <select className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" value={planningState.supplier} onChange={e => setPlanningState(p => ({ ...p, supplier: e.target.value }))}>
+              <option value="budget">Budget Beans ($1.00/cup)</option>
+              <option value="premium">Premium Beans ($2.00/cup)</option>
+              <option value="gourmet">Gourmet Beans ($3.00/cup)</option>
+            </select>
+            <div className="flex gap-4"><Button onClick={() => updateStep(1)} className="w-1/2">Previous</Button><Button onClick={() => updateStep(3)} className="w-1/2">Next</Button></div>
+          </div>
+        )}
+        
+        {planningState.step === 3 && (
+          <div className="space-y-6">
+            <Label className="block text-lg font-medium text-gray-700">Initial Baristas</Label>
+            <Input type="number" min="1" max="5" value={planningState.baristaCount} onChange={e => setPlanningState(p => ({ ...p, baristaCount: parseInt(e.target.value) }))} />
+            <p className="text-sm text-gray-500">Each costs $2,500 upfront and in monthly salary.</p>
+            <Label className="block text-lg font-medium text-gray-700">Initial Marketing Budget</Label>
+            <Input type="number" min="0" max="10000" step="500" value={planningState.marketingBudget} onChange={e => setPlanningState(p => ({ ...p, marketingBudget: parseInt(e.target.value) }))} />
+            <p className="text-sm text-gray-500">One-time spend to get the word out on opening day.</p>
+            <div className="flex gap-4"><Button onClick={() => updateStep(2)} className="w-1/2">Previous</Button><Button onClick={() => updateStep(4)} className="w-1/2">Next</Button></div>
+          </div>
+        )}
+        
+        {planningState.step === 4 && (
+          <div className="space-y-6">
+            <h3 className="text-xl font-bold text-gray-700 text-center">Finalize Your Plan</h3>
+            <div className="bg-gray-50 rounded-xl p-6 shadow-inner space-y-3">
+              <p><span className="font-semibold">Shop Name:</span> {planningState.shopName}</p>
+              <p><span className="font-semibold">Location:</span> {configs.locations[planningState.location].name}</p>
+              <p><span className="font-semibold">Equipment:</span> {configs.equipment[planningState.equipment].name}</p>
+              <p><span className="font-semibold">Supplier:</span> {configs.suppliers[planningState.supplier].name}</p>
+              <p><span className="font-semibold">Baristas:</span> {planningState.baristaCount}</p>
+              <p><span className="font-semibold">Initial Marketing:</span> ${planningState.marketingBudget.toLocaleString()}</p>
+              <p className="font-bold"><span className="font-semibold">Upfront Cost:</span> ${(configs.equipment[planningState.equipment].cost + planningState.baristaCount * 2500 + planningState.marketingBudget).toLocaleString()}</p>
+              <p className="font-bold"><span className="font-semibold">Starting Cash:</span> ${(gameState.initialCapital - (configs.equipment[planningState.equipment].cost + planningState.baristaCount * 2500 + planningState.marketingBudget)).toLocaleString()}</p>
+            </div>
+            <div className="flex gap-4"><Button onClick={() => updateStep(3)} className="w-1/2">Previous</Button><Button onClick={handlePlanFinalization} className="w-1/2">Open for Business!</Button></div>
+          </div>
+        )}
+      </div>
+    );
+
+    const renderRunningPhase = () => (
+      <div className="flex flex-col lg:flex-row gap-8">
+        <div className="lg:w-2/3 flex flex-col gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-green-100 text-green-800 p-4 rounded-xl shadow-md text-center"><div className="font-bold text-lg">Cash</div><div className="text-2xl font-semibold">${gameState.money.toLocaleString()}</div></div>
+            <div className="bg-blue-100 text-blue-800 p-4 rounded-xl shadow-md text-center"><div className="font-bold text-lg">Customers</div><div className="text-2xl font-semibold">{gameState.customers.toLocaleString()}</div></div>
+            <div className="bg-purple-100 text-purple-800 p-4 rounded-xl shadow-md text-center"><div className="font-bold text-lg">Reputation</div><div className="text-2xl font-semibold">{(gameState.reputation * 100).toFixed(0)}%</div></div>
+            <div className="bg-orange-100 text-orange-800 p-4 rounded-xl shadow-md text-center"><div className="font-bold text-lg">Day</div><div className="text-2xl font-semibold">{gameState.day}</div></div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div className="bg-gray-100 text-gray-800 p-4 rounded-xl shadow-md text-center"><div className="font-bold text-lg">Baristas</div><div className="text-2xl font-semibold">{gameState.baristas.length}</div></div>
+            <div className="bg-gray-100 text-gray-800 p-4 rounded-xl shadow-md text-center"><div className="font-bold text-lg">Equipment Health</div><div className="text-2xl font-semibold">{(gameState.equipmentHealth * 100).toFixed(0)}%</div></div>
+            <div className="bg-gray-100 text-gray-800 p-4 rounded-xl shadow-md text-center"><div className="font-bold text-lg">Weather</div><div className="text-2xl font-semibold">{gameState.weather}</div></div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <Button onClick={() => handleAction('market')} disabled={gameState.money < 1000}>Run Ad Campaign ($1,000)</Button>
+            <Button onClick={() => handleAction('hire')} disabled={gameState.money < 2500}>Hire Barista ($2,500)</Button>
+            <Button onClick={() => handleAction('upgrade')} disabled={gameState.money < 20000 || gameState.equipment === 'pro'}>Upgrade Equipment</Button>
+            <Button onClick={() => handleAction('buy_inventory')} disabled={gameState.money < 800}>Buy Supplies ($800)</Button>
+            <Button onClick={() => handleAction('take_loan')} disabled={!!gameState.loan}>Take Loan ($10,000)</Button>
+            <Button>Adjust Prices</Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline">Adjust Prices</Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80">
+                <div className="grid gap-4">
+                  <div className="space-y-2">
+                    <h4 className="font-medium leading-none">Menu Prices</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Set prices for your menu items.
+                    </p>
+                  </div>
+                  {configs.menuItems.map(item => (
+                    <div key={item.id} className="grid grid-cols-3 items-center gap-4">
+                      <Label htmlFor={item.id}>{item.name}</Label>
+                      <Input id={item.id} type="number" value={gameState.menuPrices[item.id]} onChange={e => handlePriceChange(item.id, parseInt(e.target.value))} />
+                    </div>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div className="flex-grow bg-gray-50 rounded-xl p-4 shadow-inner overflow-y-auto h-48">
+            <h2 className="text-xl font-bold text-gray-700 mb-2">Daily Log</h2>
+            <div className="text-sm text-gray-600 space-y-1">
+              {gameState.log.map((entry, index) => (
+                <div key={index} className={`log-item ${entry.color}`}>
+                  Day {entry.day}: {entry.message}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="lg:w-1/3 flex flex-col gap-4 bg-gray-50 rounded-2xl p-6 shadow-lg">
+          <h2 className="text-2xl font-bold text-gray-700 mb-4">Shop Details</h2>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center"><span className="font-semibold text-gray-600">Name:</span><span className="text-gray-800 font-medium">{gameState.businessPlan.shopName}</span></div>
+            <div className="flex justify-between items-center"><span className="font-semibold text-gray-600">Monthly Rent:</span><span className="text-gray-800 font-medium">${gameState.rent.toLocaleString()}</span></div>
+            {gameState.loan && <div className="flex justify-between items-center"><span className="font-semibold text-gray-600">Loan Payment:</span><span className="text-gray-800 font-medium">${gameState.loan.payment.toLocaleString()}/mo</span></div>}
+            <div className="flex justify-between items-center"><span className="font-semibold text-gray-600">Equipment:</span><span className="text-gray-800 font-medium">{configs.equipment[gameState.equipment].name}</span></div>
+          </div>
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <h3 className="text-xl font-bold text-gray-700 mb-2">Inventory</h3>
+            <div className="flex justify-between items-center"><span className="font-semibold text-gray-600">Coffee Beans:</span><span className="text-gray-800 font-medium">{gameState.inventory.beans} cups</span></div>
+            <div className="flex justify-between items-center"><span className="font-semibold text-gray-600">Milk:</span><span className="text-gray-800 font-medium">{gameState.inventory.milk} cups</span></div>
+            {gameState.inventory.beans < 100 && <p className="text-red-500 mt-2 animate-pulse">Running low on beans!</p>}
+            {gameState.inventory.milk < 100 && <p className="text-red-500 mt-2 animate-pulse">Running low on milk!</p>}
+          </div>
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <Button onClick={() => window.location.reload()} className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3">Restart Game</Button>
+          </div>
+        </div>
+      </div>
+    );
+
+    return (
+        <div className="bg-gray-100 flex flex-col items-center justify-start min-h-screen p-4">
+            <style>{AppCSS}</style>
+            <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-10 max-w-5xl w-full flex flex-col gap-8">
+                <h1 className="4xl font-bold text-center text-gray-800 mb-6">Coffee Shop Simulator</h1>
+                {gameState.phase === 'planning' ? renderPlanningPhase() : renderRunningPhase()}
+            </div>
+            <MessageBox />
+        </div>
+    );
+};
+
+export default App;
+
+// Mocking shadcn/ui components
+const MockDialog = ({ open, children }) => open ? <div className="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-50">{children}</div> : null;
+const MockDialogContent = ({ children, ...props }) => <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">{children}</div>;
+const MockDialogHeader = ({ children }) => <div className="space-y-2">{children}</div>;
+const MockDialogTitle = ({ children }) => <h3 className="text-2xl font-bold text-gray-800 mb-4">{children}</h3>;
+const MockDialogDescription = ({ children }) => <p className="text-gray-600 mb-6">{children}</p>;
+const MockDialogFooter = ({ children }) => <div className="flex justify-center">{children}</div>;
+const MockButton = ({ children, onClick, ...props }) => <button className={`bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 ${props.disabled ? 'bg-gray-400' : ''}`} onClick={onClick} {...props}>{children}</button>;
+const MockInput = ({ ...props }) => <input className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2" {...props} />;
+const MockLabel = ({ children, ...props }) => <label className="block text-lg font-medium text-gray-700" {...props}>{children}</label>;
+const MockPopover = ({ children }) => <div className="relative">{children}</div>;
+const MockPopoverTrigger = ({ children }) => <div>{children}</div>;
+const MockPopoverContent = ({ children }) => <div className="absolute z-50 bg-white rounded-xl shadow-xl p-4">{children}</div>;
+
+// Override the real components with the mocks for this environment
+const originalCreateRoot = createRoot;
+const root = document.createElement('div');
+document.body.appendChild(root);
+
+createRoot = (container) => {
+    return originalCreateRoot(container);
+};
+
+// Replace shadcn components with mock versions
+Object.assign(shadcn, {
+  Dialog: MockDialog,
+  DialogContent: MockDialogContent,
+  DialogHeader: MockDialogHeader,
+  DialogTitle: MockDialogTitle,
+  DialogDescription: MockDialogDescription,
+  DialogFooter: MockDialogFooter,
+  Button: MockButton,
+  Input: MockInput,
+  Label: MockLabel,
+  Popover: MockPopover,
+  PopoverTrigger: MockPopoverTrigger,
+  PopoverContent: MockPopoverContent,
+});
