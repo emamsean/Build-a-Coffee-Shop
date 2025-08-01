@@ -27,27 +27,28 @@
 <div id="root"></div>
 
 <!-- React and ReactDOM scripts from CDN -->
-<script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-<!-- Babel script to transpile JSX -->
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 
-<script type="text/babel">
-// All the React code goes here
-// Mock shadcn/ui components - these are simple replacements for the UI library
+<script type="text/javascript">
+"use strict";
+
+const e = React.createElement;
+
+// Mock shadcn/ui components
 const shadcn = {
-  Dialog: ({ open, children }) => open ? <div className="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-50">{children}</div> : null,
-  DialogContent: ({ children, ...props }) => <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center" {...props}>{children}</div>,
-  DialogHeader: ({ children }) => <div className="space-y-2">{children}</div>,
-  DialogTitle: ({ children }) => <h3 className="text-2xl font-bold text-gray-800 mb-4">{children}</h3>,
-  DialogDescription: ({ children }) => <p className="text-gray-600 mb-6">{children}</p>,
-  DialogFooter: ({ children }) => <div className="flex justify-center">{children}</div>,
-  Button: ({ children, onClick, ...props }) => <button className={`bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 ${props.disabled ? 'bg-gray-400' : ''}`} onClick={onClick} {...props}>{children}</button>,
-  Input: ({ ...props }) => <input className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2" {...props} />,
-  Label: ({ children, ...props }) => <label className="block text-lg font-medium text-gray-700" {...props}>{children}</label>,
-  Popover: ({ children }) => <div className="relative">{children}</div>,
-  PopoverTrigger: ({ children }) => <div>{children}</div>,
-  PopoverContent: ({ children }) => <div className="absolute z-50 bg-white rounded-xl shadow-xl p-4">{children}</div>,
+  Dialog: ({ open, children }) => open ? e('div', { className: "fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-50" }, children) : null,
+  DialogContent: ({ children, ...props }) => e('div', { className: "bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center", ...props }, children),
+  DialogHeader: ({ children }) => e('div', { className: "space-y-2" }, children),
+  DialogTitle: ({ children }) => e('h3', { className: "text-2xl font-bold text-gray-800 mb-4" }, children),
+  DialogDescription: ({ children }) => e('p', { className: "text-gray-600 mb-6" }, children),
+  DialogFooter: ({ children }) => e('div', { className: "flex justify-center" }, children),
+  Button: ({ children, onClick, ...props }) => e('button', { className: `bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 ${props.disabled ? 'bg-gray-400' : ''}`, onClick: onClick, ...props }, children),
+  Input: ({ ...props }) => e('input', { className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2", ...props }),
+  Label: ({ children, ...props }) => e('label', { className: "block text-lg font-medium text-gray-700", ...props }, children),
+  Popover: ({ children }) => e('div', { className: "relative" }, children),
+  PopoverTrigger: ({ children }) => e('div', null, children),
+  PopoverContent: ({ children }) => e('div', { className: "absolute z-50 bg-white rounded-xl shadow-xl p-4" }, children),
 };
 
 // CSS for the App
@@ -85,18 +86,16 @@ const useMessageBox = () => {
     });
   };
 
-  const MessageBox = () => (
-    <shadcn.Dialog open={modalState.isOpen}>
-      <shadcn.DialogContent className="sm:max-w-[425px]">
-        <shadcn.DialogHeader>
-          <shadcn.DialogTitle>{modalState.title}</shadcn.DialogTitle>
-        </shadcn.DialogHeader>
-        <shadcn.DialogDescription>{modalState.message}</shadcn.DialogDescription>
-        <shadcn.DialogFooter>
-          <shadcn.Button onClick={modalState.onClose}>OK</shadcn.Button>
-        </shadcn.DialogFooter>
-      </shadcn.DialogContent>
-    </shadcn.Dialog>
+  const MessageBox = () => e(shadcn.Dialog, { open: modalState.isOpen },
+    e(shadcn.DialogContent, { className: "sm:max-w-[425px]" },
+      e(shadcn.DialogHeader, null,
+        e(shadcn.DialogTitle, null, modalState.title)
+      ),
+      e(shadcn.DialogDescription, null, modalState.message),
+      e(shadcn.DialogFooter, null,
+        e(shadcn.Button, { onClick: modalState.onClose }, "OK")
+      )
+    )
   );
 
   return [showMessage, MessageBox];
@@ -434,175 +433,149 @@ const App = () => {
     };
 
     // --- Rendering Logic ---
-    const renderPlanningPhase = () => (
-      <div className="flex flex-col gap-6">
-        <h2 className="text-2xl font-semibold text-gray-700 text-center mb-4">Phase 1: Build Your Business Plan</h2>
-        <div className="flex justify-center items-center gap-2 mb-6">
-          {[1, 2, 3, 4].map(step => (
-            <div key={step} className={`w-4 h-4 rounded-full step-indicator ${planningState.step === step ? 'bg-indigo-500' : planningState.step > step ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-          ))}
-        </div>
-        
-        {planningState.step === 1 && (
-          <div className="space-y-6">
-            <Label className="block text-lg font-medium text-gray-700">Shop Name</Label>
-            <Input type="text" value={planningState.shopName} onChange={e => setPlanningState(p => ({ ...p, shopName: e.target.value }))} placeholder="e.g., The Daily Grind" />
-            <Label className="block text-lg font-medium text-gray-700">Location</Label>
-            <select className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" value={planningState.location} onChange={e => setPlanningState(p => ({ ...p, location: e.target.value }))}>
-              <option value="downtown">$15,000 Rent/Month (High Traffic)</option>
-              <option value="suburbs">$5,000 Rent/Month (Moderate Traffic)</option>
-              <option value="college">$10,000 Rent/Month (High Student Traffic)</option>
-            </select>
-            <Button onClick={() => updateStep(2)} className="w-full">Next</Button>
-          </div>
-        )}
-        
-        {planningState.step === 2 && (
-          <div className="space-y-6">
-            <Label className="block text-lg font-medium text-gray-700">Equipment</Label>
-            <select className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" value={planningState.equipment} onChange={e => setPlanningState(p => ({ ...p, equipment: e.target.value }))}>
-              <option value="basic">$10,000 (Slow, Low Quality)</option>
-              <option value="standard">$25,000 (Average Speed, Good Quality)</option>
-              <option value="pro">$40,000 (Fast, High Quality)</option>
-            </select>
-            <Label className="block text-lg font-medium text-gray-700">Coffee Bean Supplier</Label>
-            <select className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" value={planningState.supplier} onChange={e => setPlanningState(p => ({ ...p, supplier: e.target.value }))}>
-              <option value="budget">Budget Beans ($1.00/cup)</option>
-              <option value="premium">Premium Beans ($2.00/cup)</option>
-              <option value="gourmet">Gourmet Beans ($3.00/cup)</option>
-            </select>
-            <div className="flex gap-4"><Button onClick={() => updateStep(1)} className="w-1/2">Previous</Button><Button onClick={() => updateStep(3)} className="w-1/2">Next</Button></div>
-          </div>
-        )}
-        
-        {planningState.step === 3 && (
-          <div className="space-y-6">
-            <Label className="block text-lg font-medium text-gray-700">Initial Baristas</Label>
-            <Input type="number" min="1" max="5" value={planningState.baristaCount} onChange={e => setPlanningState(p => ({ ...p, baristaCount: parseInt(e.target.value) }))} />
-            <p className="text-sm text-gray-500">Each costs $2,500 upfront and in monthly salary.</p>
-            <Label className="block text-lg font-medium text-gray-700">Initial Marketing Budget</Label>
-            <Input type="number" min="0" max="10000" step="500" value={planningState.marketingBudget} onChange={e => setPlanningState(p => ({ ...p, marketingBudget: parseInt(e.target.value) }))} />
-            <p className="text-sm text-gray-500">One-time spend to get the word out on opening day.</p>
-            <div className="flex gap-4"><Button onClick={() => updateStep(2)} className="w-1/2">Previous</Button><Button onClick={() => updateStep(4)} className="w-1/2">Next</Button></div>
-          </div>
-        )}
-        
-        {planningState.step === 4 && (
-          <div className="space-y-6">
-            <h3 className="text-xl font-bold text-gray-700 text-center">Finalize Your Plan</h3>
-            <div className="bg-gray-50 rounded-xl p-6 shadow-inner space-y-3">
-              <p><span className="font-semibold">Shop Name:</span> {planningState.shopName}</p>
-              <p><span className="font-semibold">Location:</span> {configs.locations[planningState.location].name}</p>
-              <p><span className="font-semibold">Equipment:</span> {configs.equipment[planningState.equipment].name}</p>
-              <p><span className="font-semibold">Supplier:</span> {configs.suppliers[planningState.supplier].name}</p>
-              <p><span className="font-semibold">Baristas:</span> {planningState.baristaCount}</p>
-              <p><span className="font-semibold">Initial Marketing:</span> ${planningState.marketingBudget.toLocaleString()}</p>
-              <p className="font-bold"><span className="font-semibold">Upfront Cost:</span> ${(configs.equipment[planningState.equipment].cost + planningState.baristaCount * 2500 + planningState.marketingBudget).toLocaleString()}</p>
-              <p className="font-bold"><span className="font-semibold">Starting Cash:</span> ${(gameState.initialCapital - (configs.equipment[planningState.equipment].cost + planningState.baristaCount * 2500 + planningState.marketingBudget)).toLocaleString()}</p>
-            </div>
-            <div className="flex gap-4"><Button onClick={() => updateStep(3)} className="w-1/2">Previous</Button><Button onClick={handlePlanFinalization} className="w-1/2">Open for Business!</Button></div>
-          </div>
-        )}
-      </div>
+    const renderPlanningPhase = () => e('div', { className: "flex flex-col gap-6" },
+        e('h2', { className: "text-2xl font-semibold text-gray-700 text-center mb-4" }, "Phase 1: Build Your Business Plan"),
+        e('div', { className: "flex justify-center items-center gap-2 mb-6" },
+            [1, 2, 3, 4].map(step => e('div', { key: step, className: `w-4 h-4 rounded-full step-indicator ${planningState.step === step ? 'bg-indigo-500' : planningState.step > step ? 'bg-green-500' : 'bg-gray-300'}` }))
+        ),
+        planningState.step === 1 && e('div', { className: "space-y-6" },
+            e(shadcn.Label, { className: "block text-lg font-medium text-gray-700" }, "Shop Name"),
+            e(shadcn.Input, { type: "text", value: planningState.shopName, onChange: e => setPlanningState(p => ({ ...p, shopName: e.target.value })), placeholder: "e.g., The Daily Grind" }),
+            e(shadcn.Label, { className: "block text-lg font-medium text-gray-700" }, "Location"),
+            e('select', { className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2", value: planningState.location, onChange: e => setPlanningState(p => ({ ...p, location: e.target.value })) },
+                e('option', { value: "downtown" }, "$15,000 Rent/Month (High Traffic)"),
+                e('option', { value: "suburbs" }, "$5,000 Rent/Month (Moderate Traffic)"),
+                e('option', { value: "college" }, "$10,000 Rent/Month (High Student Traffic)")
+            ),
+            e(shadcn.Button, { onClick: () => updateStep(2), className: "w-full" }, "Next")
+        ),
+        planningState.step === 2 && e('div', { className: "space-y-6" },
+            e(shadcn.Label, { className: "block text-lg font-medium text-gray-700" }, "Equipment"),
+            e('select', { className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2", value: planningState.equipment, onChange: e => setPlanningState(p => ({ ...p, equipment: e.target.value })) },
+                e('option', { value: "basic" }, "$10,000 (Slow, Low Quality)"),
+                e('option', { value: "standard" }, "$25,000 (Average Speed, Good Quality)"),
+                e('option', { value: "pro" }, "$40,000 (Fast, High Quality)")
+            ),
+            e(shadcn.Label, { className: "block text-lg font-medium text-gray-700" }, "Coffee Bean Supplier"),
+            e('select', { className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2", value: planningState.supplier, onChange: e => setPlanningState(p => ({ ...p, supplier: e.target.value })) },
+                e('option', { value: "budget" }, "Budget Beans ($1.00/cup)"),
+                e('option', { value: "premium" }, "Premium Beans ($2.00/cup)"),
+                e('option', { value: "gourmet" }, "Gourmet Beans ($3.00/cup)")
+            ),
+            e('div', { className: "flex gap-4" },
+                e(shadcn.Button, { onClick: () => updateStep(1), className: "w-1/2" }, "Previous"),
+                e(shadcn.Button, { onClick: () => updateStep(3), className: "w-1/2" }, "Next")
+            )
+        ),
+        planningState.step === 3 && e('div', { className: "space-y-6" },
+            e(shadcn.Label, { className: "block text-lg font-medium text-gray-700" }, "Initial Baristas"),
+            e(shadcn.Input, { type: "number", min: "1", max: "5", value: planningState.baristaCount, onChange: e => setPlanningState(p => ({ ...p, baristaCount: parseInt(e.target.value) })) }),
+            e('p', { className: "text-sm text-gray-500" }, "Each costs $2,500 upfront and in monthly salary."),
+            e(shadcn.Label, { className: "block text-lg font-medium text-gray-700" }, "Initial Marketing Budget"),
+            e(shadcn.Input, { type: "number", min: "0", max: "10000", step: "500", value: planningState.marketingBudget, onChange: e => setPlanningState(p => ({ ...p, marketingBudget: parseInt(e.target.value) })) }),
+            e('p', { className: "text-sm text-gray-500" }, "One-time spend to get the word out on opening day."),
+            e('div', { className: "flex gap-4" },
+                e(shadcn.Button, { onClick: () => updateStep(2), className: "w-1/2" }, "Previous"),
+                e(shadcn.Button, { onClick: () => updateStep(4), className: "w-1/2" }, "Next")
+            )
+        ),
+        planningState.step === 4 && e('div', { className: "space-y-6" },
+            e('h3', { className: "text-xl font-bold text-gray-700 text-center" }, "Finalize Your Plan"),
+            e('div', { className: "bg-gray-50 rounded-xl p-6 shadow-inner space-y-3" },
+                e('p', null, e('span', { className: "font-semibold" }, "Shop Name:"), ` ${planningState.shopName}`),
+                e('p', null, e('span', { className: "font-semibold" }, "Location:"), ` ${configs.locations[planningState.location].name}`),
+                e('p', null, e('span', { className: "font-semibold" }, "Equipment:"), ` ${configs.equipment[planningState.equipment].name}`),
+                e('p', null, e('span', { className: "font-semibold" }, "Supplier:"), ` ${configs.suppliers[planningState.supplier].name}`),
+                e('p', null, e('span', { className: "font-semibold" }, "Baristas:"), ` ${planningState.baristaCount}`),
+                e('p', null, e('span', { className: "font-semibold" }, "Initial Marketing:"), ` $${planningState.marketingBudget.toLocaleString()}`),
+                e('p', { className: "font-bold" }, e('span', { className: "font-semibold" }, "Upfront Cost:"), ` $${(configs.equipment[planningState.equipment].cost + planningState.baristaCount * 2500 + planningState.marketingBudget).toLocaleString()}`),
+                e('p', { className: "font-bold" }, e('span', { className: "font-semibold" }, "Starting Cash:"), ` $${(gameState.initialCapital - (configs.equipment[planningState.equipment].cost + planningState.baristaCount * 2500 + planningState.marketingBudget)).toLocaleString()}`)
+            ),
+            e('div', { className: "flex gap-4" },
+                e(shadcn.Button, { onClick: () => updateStep(3), className: "w-1/2" }, "Previous"),
+                e(shadcn.Button, { onClick: handlePlanFinalization, className: "w-1/2" }, "Open for Business!")
+            )
+        )
     );
 
-    const renderRunningPhase = () => (
-      <div className="flex flex-col lg:flex-row gap-8">
-        <div className="lg:w-2/3 flex flex-col gap-4">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-green-100 text-green-800 p-4 rounded-xl shadow-md text-center"><div className="font-bold text-lg">Cash</div><div className="text-2xl font-semibold">${gameState.money.toLocaleString()}</div></div>
-            <div className="bg-blue-100 text-blue-800 p-4 rounded-xl shadow-md text-center"><div className="font-bold text-lg">Customers</div><div className="text-2xl font-semibold">{gameState.customers.toLocaleString()}</div></div>
-            <div className="bg-purple-100 text-purple-800 p-4 rounded-xl shadow-md text-center"><div className="font-bold text-lg">Reputation</div><div className="text-2xl font-semibold">{(gameState.reputation * 100).toFixed(0)}%</div></div>
-            <div className="bg-orange-100 text-orange-800 p-4 rounded-xl shadow-md text-center"><div className="font-bold text-lg">Day</div><div className="text-2xl font-semibold">{gameState.day}</div></div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <div className="bg-gray-100 text-gray-800 p-4 rounded-xl shadow-md text-center"><div className="font-bold text-lg">Baristas</div><div className="text-2xl font-semibold">{gameState.baristas.length}</div></div>
-            <div className="bg-gray-100 text-gray-800 p-4 rounded-xl shadow-md text-center"><div className="font-bold text-lg">Equipment Health</div><div className="text-2xl font-semibold">{(gameState.equipmentHealth * 100).toFixed(0)}%</div></div>
-            <div className="bg-gray-100 text-gray-800 p-4 rounded-xl shadow-md text-center"><div className="font-bold text-lg">Weather</div><div className="text-2xl font-semibold">{gameState.weather}</div></div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            <shadcn.Popover>
-              <shadcn.PopoverTrigger asChild>
-                <shadcn.Button variant="outline">Adjust Prices</shadcn.Button>
-              </shadcn.PopoverTrigger>
-              <shadcn.PopoverContent className="w-80">
-                <div className="grid gap-4">
-                  <div className="space-y-2">
-                    <h4 className="font-medium leading-none">Menu Prices</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Set prices for your menu items.
-                    </p>
-                  </div>
-                  {configs.menuItems.map(item => (
-                    <div key={item.id} className="grid grid-cols-3 items-center gap-4">
-                      <shadcn.Label htmlFor={item.id}>{item.name}</shadcn.Label>
-                      <shadcn.Input id={item.id} type="number" value={gameState.menuPrices[item.id]} onChange={e => handlePriceChange(item.id, parseInt(e.target.value))} />
-                    </div>
-                  ))}
-                </div>
-              </shadcn.PopoverContent>
-            </shadcn.Popover>
-            <shadcn.Button onClick={() => handleAction('market')} disabled={gameState.money < 1000}>Run Ad Campaign ($1,000)</shadcn.Button>
-            <shadcn.Button onClick={() => handleAction('hire')} disabled={gameState.money < 2500}>Hire Barista ($2,500)</shadcn.Button>
-            <shadcn.Button onClick={() => handleAction('upgrade')} disabled={gameState.money < 20000 || gameState.equipment === 'pro'}>Upgrade Equipment</shadcn.Button>
-            <shadcn.Button onClick={() => handleAction('buy_inventory')} disabled={gameState.money < 800}>Buy Supplies ($800)</shadcn.Button>
-            <shadcn.Button onClick={() => handleAction('take_loan')} disabled={!!gameState.loan}>Take Loan ($10,000)</shadcn.Button>
-          </div>
-
-          <div className="flex-grow bg-gray-50 rounded-xl p-4 shadow-inner overflow-y-auto h-48">
-            <h2 className="text-xl font-bold text-gray-700 mb-2">Daily Log</h2>
-            <div className="text-sm text-gray-600 space-y-1">
-              {gameState.log.map((entry, index) => (
-                <div key={index} className={`log-item ${entry.color}`}>
-                  Day {entry.day}: {entry.message}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="lg:w-1/3 flex flex-col gap-4 bg-gray-50 rounded-2xl p-6 shadow-lg">
-          <h2 className="text-2xl font-bold text-gray-700 mb-4">Shop Details</h2>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center"><span className="font-semibold text-gray-600">Name:</span><span className="text-gray-800 font-medium">{gameState.businessPlan.shopName}</span></div>
-            <div className="flex justify-between items-center"><span className="font-semibold text-gray-600">Monthly Rent:</span><span className="text-gray-800 font-medium">${gameState.rent.toLocaleString()}</span></div>
-            {gameState.loan && <div className="flex justify-between items-center"><span className="font-semibold text-gray-600">Loan Payment:</span><span className="text-gray-800 font-medium">${gameState.loan.payment.toLocaleString()}/mo</span></div>}
-            <div className="flex justify-between items-center"><span className="font-semibold text-gray-600">Equipment:</span><span className="text-gray-800 font-medium">{configs.equipment[gameState.equipment].name}</span></div>
-          </div>
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <h3 className="text-xl font-bold text-gray-700 mb-2">Inventory</h3>
-            <div className="flex justify-between items-center"><span className="font-semibold text-gray-600">Coffee Beans:</span><span className="text-gray-800 font-medium">{gameState.inventory.beans} cups</span></div>
-            <div className="flex justify-between items-center"><span className="font-semibold text-gray-600">Milk:</span><span className="text-gray-800 font-medium">{gameState.inventory.milk} cups</span></div>
-            {gameState.inventory.beans < 100 && <p className="text-red-500 mt-2 animate-pulse">Running low on beans!</p>}
-            {gameState.inventory.milk < 100 && <p className="text-red-500 mt-2 animate-pulse">Running low on milk!</p>}
-          </div>
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <shadcn.Button onClick={() => window.location.reload()} className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3">Restart Game</shadcn.Button>
-          </div>
-        </div>
-      </div>
+    const renderRunningPhase = () => e('div', { className: "flex flex-col lg:flex-row gap-8" },
+        e('div', { className: "lg:w-2/3 flex flex-col gap-4" },
+            e('div', { className: "grid grid-cols-2 sm:grid-cols-4 gap-4" },
+                e('div', { className: "bg-green-100 text-green-800 p-4 rounded-xl shadow-md text-center" }, e('div', { className: "font-bold text-lg" }, "Cash"), e('div', { className: "text-2xl font-semibold" }, `$${gameState.money.toLocaleString()}`)),
+                e('div', { className: "bg-blue-100 text-blue-800 p-4 rounded-xl shadow-md text-center" }, e('div', { className: "font-bold text-lg" }, "Customers"), e('div', { className: "text-2xl font-semibold" }, gameState.customers.toLocaleString())),
+                e('div', { className: "bg-purple-100 text-purple-800 p-4 rounded-xl shadow-md text-center" }, e('div', { className: "font-bold text-lg" }, "Reputation"), e('div', { className: "text-2xl font-semibold" }, `${(gameState.reputation * 100).toFixed(0)}%`)),
+                e('div', { className: "bg-orange-100 text-orange-800 p-4 rounded-xl shadow-md text-center" }, e('div', { className: "font-bold text-lg" }, "Day"), e('div', { className: "text-2xl font-semibold" }, gameState.day))
+            ),
+            e('div', { className: "grid grid-cols-2 sm:grid-cols-3 gap-4" },
+                e('div', { className: "bg-gray-100 text-gray-800 p-4 rounded-xl shadow-md text-center" }, e('div', { className: "font-bold text-lg" }, "Baristas"), e('div', { className: "text-2xl font-semibold" }, gameState.baristas.length)),
+                e('div', { className: "bg-gray-100 text-gray-800 p-4 rounded-xl shadow-md text-center" }, e('div', { className: "font-bold text-lg" }, "Equipment Health"), e('div', { className: "text-2xl font-semibold" }, `${(gameState.equipmentHealth * 100).toFixed(0)}%`)),
+                e('div', { className: "bg-gray-100 text-gray-800 p-4 rounded-xl shadow-md text-center" }, e('div', { className: "font-bold text-lg" }, "Weather"), e('div', { className: "text-2xl font-semibold" }, gameState.weather))
+            ),
+            e('div', { className: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4" },
+                e(shadcn.Popover, null,
+                    e(shadcn.PopoverTrigger, { asChild: true },
+                        e(shadcn.Button, { variant: "outline" }, "Adjust Prices")
+                    ),
+                    e(shadcn.PopoverContent, { className: "w-80" },
+                        e('div', { className: "grid gap-4" },
+                            e('div', { className: "space-y-2" },
+                                e('h4', { className: "font-medium leading-none" }, "Menu Prices"),
+                                e('p', { className: "text-sm text-muted-foreground" }, "Set prices for your menu items.")
+                            ),
+                            configs.menuItems.map(item => e('div', { key: item.id, className: "grid grid-cols-3 items-center gap-4" },
+                                e(shadcn.Label, { htmlFor: item.id }, item.name),
+                                e(shadcn.Input, { id: item.id, type: "number", value: gameState.menuPrices[item.id], onChange: e => handlePriceChange(item.id, parseInt(e.target.value)) })
+                            ))
+                        )
+                    )
+                ),
+                e(shadcn.Button, { onClick: () => handleAction('market'), disabled: gameState.money < 1000 }, "Run Ad Campaign ($1,000)"),
+                e(shadcn.Button, { onClick: () => handleAction('hire'), disabled: gameState.money < 2500 }, "Hire Barista ($2,500)"),
+                e(shadcn.Button, { onClick: () => handleAction('upgrade'), disabled: gameState.money < 20000 || gameState.equipment === 'pro' }, "Upgrade Equipment"),
+                e(shadcn.Button, { onClick: () => handleAction('buy_inventory'), disabled: gameState.money < 800 }, "Buy Supplies ($800)"),
+                e(shadcn.Button, { onClick: () => handleAction('take_loan'), disabled: !!gameState.loan }, "Take Loan ($10,000)")
+            ),
+            e('div', { className: "flex-grow bg-gray-50 rounded-xl p-4 shadow-inner overflow-y-auto h-48" },
+                e('h2', { className: "text-xl font-bold text-gray-700 mb-2" }, "Daily Log"),
+                e('div', { className: "text-sm text-gray-600 space-y-1" },
+                    gameState.log.map((entry, index) => e('div', { key: index, className: `log-item ${entry.color}` }, `Day ${entry.day}: ${entry.message}`))
+                )
+            )
+        ),
+        e('div', { className: "lg:w-1/3 flex flex-col gap-4 bg-gray-50 rounded-2xl p-6 shadow-lg" },
+            e('h2', { className: "text-2xl font-bold text-gray-700 mb-4" }, "Shop Details"),
+            e('div', { className: "space-y-4" },
+                e('div', { className: "flex justify-between items-center" }, e('span', { className: "font-semibold text-gray-600" }, "Name:"), e('span', { className: "text-gray-800 font-medium" }, gameState.businessPlan.shopName)),
+                e('div', { className: "flex justify-between items-center" }, e('span', { className: "font-semibold text-gray-600" }, "Monthly Rent:"), e('span', { className: "text-gray-800 font-medium" }, `$${gameState.rent.toLocaleString()}`)),
+                gameState.loan && e('div', { className: "flex justify-between items-center" }, e('span', { className: "font-semibold text-gray-600" }, "Loan Payment:"), e('span', { className: "text-gray-800 font-medium" }, `$${gameState.loan.payment.toLocaleString()}/mo`)),
+                e('div', { className: "flex justify-between items-center" }, e('span', { className: "font-semibold text-gray-600" }, "Equipment:"), e('span', { className: "text-gray-800 font-medium" }, configs.equipment[gameState.equipment].name))
+            ),
+            e('div', { className: "mt-6 pt-6 border-t border-gray-200" },
+                e('h3', { className: "text-xl font-bold text-gray-700 mb-2" }, "Inventory"),
+                e('div', { className: "flex justify-between items-center" }, e('span', { className: "font-semibold text-gray-600" }, "Coffee Beans:"), e('span', { className: "text-gray-800 font-medium" }, `${gameState.inventory.beans} cups`)),
+                e('div', { className: "flex justify-between items-center" }, e('span', { className: "font-semibold text-gray-600" }, "Milk:"), e('span', { className: "text-gray-800 font-medium" }, `${gameState.inventory.milk} cups`)),
+                gameState.inventory.beans < 100 && e('p', { className: "text-red-500 mt-2 animate-pulse" }, "Running low on beans!"),
+                gameState.inventory.milk < 100 && e('p', { className: "text-red-500 mt-2 animate-pulse" }, "Running low on milk!")
+            ),
+            e('div', { className: "mt-6 pt-6 border-t border-gray-200" },
+                e(shadcn.Button, { onClick: () => window.location.reload(), className: "w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3" }, "Restart Game")
+            )
+        )
     );
 
-    return (
-        <div className="bg-gray-100 flex flex-col items-center justify-start min-h-screen p-4">
-            <style>{AppCSS}</style>
-            <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-10 max-w-5xl w-full flex flex-col gap-8">
-                <h1 className="text-4xl font-bold text-center text-gray-800 mb-6">Coffee Shop Simulator</h1>
-                {gameState.phase === 'planning' ? renderPlanningPhase() : renderRunningPhase()}
-            </div>
-            <MessageBox />
-        </div>
+    return e('div', { className: "bg-gray-100 flex flex-col items-center justify-start min-h-screen p-4" },
+        e('style', null, AppCSS),
+        e('div', { className: "bg-white rounded-2xl shadow-2xl p-6 md:p-10 max-w-5xl w-full flex flex-col gap-8" },
+            e('h1', { className: "text-4xl font-bold text-center text-gray-800 mb-6" }, "Coffee Shop Simulator"),
+            gameState.phase === 'planning' ? renderPlanningPhase() : renderRunningPhase()
+        ),
+        e(MessageBox, null)
     );
 };
 
 // Use ReactDOM to render the App component
 const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<App />);
-
+root.render(e(App, null));
 </script>
 </body>
 </html>
-
-
