@@ -89,7 +89,7 @@ const configs = {
     ],
     baristaSkills: ['Speed', 'Quality', 'Charm'],
     supplyCosts: { beans: 1.0, milk: 0.5 }, // Cost per cup
-    supplyOrderSize: 500, // Fixed amount to order
+    supplyOrderSize: 1000, // Fixed amount to order, increased to 1000
 };
 
 const weatherConditions = ['Sunny', 'Rainy', 'Cloudy'];
@@ -541,14 +541,14 @@ const renderRunningPhase = () => {
                         <span class="font-semibold text-gray-600">Coffee Beans:</span> 
                         <div class="flex items-center gap-2">
                             <span class="text-gray-800 font-medium">${gameState.inventory.beans} cups</span>
-                            <button onclick="handleAction('order_beans')" class="px-3 py-1 text-sm bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl transition duration-300">Order</button>
+                            <button onclick="handleAction('order_beans')" class="px-3 py-1 text-sm bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl transition duration-300">Order ${configs.supplyOrderSize}</button>
                         </div>
                     </div>
                     <div class="flex justify-between items-center"> 
                         <span class="font-semibold text-gray-600">Milk:</span> 
                         <div class="flex items-center gap-2">
                             <span class="text-gray-800 font-medium">${gameState.inventory.milk} cups</span>
-                            <button onclick="handleAction('order_milk')" class="px-3 py-1 text-sm bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl transition duration-300">Order</button>
+                            <button onclick="handleAction('order_milk')" class="px-3 py-1 text-sm bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl transition duration-300">Order ${configs.supplyOrderSize}</button>
                         </div>
                     </div>
                     ${gameState.inventory.beans < 100 ? '<p class="text-red-500 mt-2 animate-pulse">Running low on beans!</p>' : ''}
@@ -589,9 +589,7 @@ const init = () => {
         isGameOver: false,
         businessPlan: {},
         inventory: { beans: 500, milk: 500 },
-        loan: null,
-        weather: 'Sunny',
-        equipmentHealth: 1.0,
+        loan: null, weather: 'Sunny', equipmentHealth: 1.0,
     };
     
     planningState = {
