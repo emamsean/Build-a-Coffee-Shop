@@ -292,7 +292,9 @@ const handleAction = (actionType) => {
             if (gameState.money >= upgradeCost) {
                 gameState.money -= upgradeCost;
                 gameState.equipment = newEquipment;
-                addLog(`You upgraded your equipment to ${configs.equipment[newEquipment].name}!`, 'event', 'text-yellow-600');
+                // NEW LOGIC: Restore equipment health to 100% after upgrade
+                gameState.equipmentHealth = 1.0;
+                addLog(`You upgraded your equipment to ${configs.equipment[newEquipment].name}! It's brand new and working perfectly.`, 'event', 'text-yellow-600');
             } else { showMessage("Not Enough Money", `You can't afford the ${configs.equipment[newEquipment].name} upgrade.`); }
             break;
         case 'take_loan':
