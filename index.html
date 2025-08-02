@@ -28,7 +28,7 @@
 
 <!-- React and ReactDOM scripts from CDN -->
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react.production.min.js" crossorigin></script>
 
 <script type="text/javascript">
 "use strict";
@@ -121,6 +121,7 @@ const configs = {
     ],
     baristaSkills: ['Speed', 'Quality', 'Charm'],
     supplyCosts: { beans: 1.0, milk: 0.5 }, // Cost per cup
+    supplyOrderSize: 500, // Fixed amount to order
 };
 
 const weatherConditions = ['Sunny', 'Rainy', 'Cloudy'];
@@ -158,10 +159,8 @@ const App = () => {
         marketingBudget: 1000,
     });
 
-    // New states for the modals
+    // New state for the price adjustment modal
     const [showPriceModal, setShowPriceModal] = React.useState(false);
-    const [showSupplyModal, setShowSupplyModal] = React.useState(false);
-    const [supplyOrder, setSupplyOrder] = React.useState({ beans: 0, milk: 0 });
 
     const [showMessage, MessageBox] = useMessageBox();
 
@@ -396,11 +395,24 @@ const App = () => {
               addLog('You took out a $10,000 loan with a $1,000 monthly payment.', 'event', 'text-green-600');
             } else { showMessage("Already have a loan", "You can only have one loan at a time."); }
             break;
+          case 'order_beans':
+            const beansCost = configs.supplyOrderSize * configs.supplyCosts.beans;
+            if (newGameState.money >= beansCost) {
+                newGameState.money -= beansCost;
+                newGameState.inventory.beans += configs.supplyOrderSize;
+                addLog(`Ordered ${configs.supplyOrderSize} cups of coffee beans for $${beansCost.toFixed(2)}.`, 'daily', 'text-green-600');
+            } else { showMessage("Not Enough Money", "You don't have enough cash to order more coffee beans."); }
+            break;
+          case 'order_milk':
+            const milkCost = configs.supplyOrderSize * configs.supplyCosts.milk;
+            if (newGameState.money >= milkCost) {
+                newGameState.money -= milkCost;
+                newGameState.inventory.milk += configs.supplyOrderSize;
+                addLog(`Ordered ${configs.supplyOrderSize} cups of milk for $${milkCost.toFixed(2)}.`, 'daily', 'text-green-600');
+            } else { showMessage("Not Enough Money", "You don't have enough cash to order more milk."); }
+            break;
           case 'show_prices':
             setShowPriceModal(true);
-            break;
-          case 'show_supplies':
-            setShowSupplyModal(true);
             break;
         }
         return newGameState;
@@ -414,29 +426,6 @@ const App = () => {
         addLog(`You adjusted the price of ${configs.menuItems.find(i => i.id === item).name} to $${newPrice}.`, 'daily', 'text-teal-600');
         return { ...prev, menuPrices: newMenuPrices };
       });
-    };
-    
-    // New function for handling the supply order from the modal
-    const handleSupplyOrder = () => {
-        const beansCost = supplyOrder.beans * configs.supplyCosts.beans;
-        const milkCost = supplyOrder.milk * configs.supplyCosts.milk;
-        const totalCost = beansCost + milkCost;
-
-        if (gameState.money >= totalCost) {
-            setGameState(prev => ({
-                ...prev,
-                money: prev.money - totalCost,
-                inventory: {
-                    beans: prev.inventory.beans + supplyOrder.beans,
-                    milk: prev.inventory.milk + supplyOrder.milk,
-                }
-            }));
-            addLog(`Ordered ${supplyOrder.beans} cups of beans and ${supplyOrder.milk} cups of milk for $${totalCost.toFixed(2)}.`, 'daily', 'text-green-600');
-            setSupplyOrder({ beans: 0, milk: 0 }); // Reset order
-            setShowSupplyModal(false);
-        } else {
-            showMessage("Not Enough Money", "You don't have enough cash for this order.");
-        }
     };
 
     // --- Rendering Logic ---
@@ -529,47 +518,6 @@ const App = () => {
         )
     );
 
-    const renderSupplyModal = () => e(shadcn.Dialog, { open: showSupplyModal },
-        e(shadcn.DialogContent, { className: "sm:max-w-[425px]" },
-            e(shadcn.DialogHeader, null,
-                e(shadcn.DialogTitle, null, "Order Supplies"),
-                e(shadcn.DialogDescription, null, `Current Cash: $${gameState.money.toLocaleString()}`)
-            ),
-            e('div', { className: "grid gap-4 py-4" },
-                e('div', { className: "grid grid-cols-4 items-center gap-4" },
-                    e(shadcn.Label, { htmlFor: "beans", className: "col-span-2 text-right" }, "Coffee Beans (cups)"),
-                    e(shadcn.Input, { 
-                        id: "beans", 
-                        type: "number", 
-                        value: supplyOrder.beans, 
-                        onChange: e => setSupplyOrder(prev => ({ ...prev, beans: parseInt(e.target.value) || 0 })),
-                        className: "col-span-2"
-                    })
-                ),
-                e('div', { className: "grid grid-cols-4 items-center gap-4" },
-                    e(shadcn.Label, { htmlFor: "milk", className: "col-span-2 text-right" }, "Milk (cups)"),
-                    e(shadcn.Input, { 
-                        id: "milk", 
-                        type: "number", 
-                        value: supplyOrder.milk, 
-                        onChange: e => setSupplyOrder(prev => ({ ...prev, milk: parseInt(e.target.value) || 0 })),
-                        className: "col-span-2"
-                    })
-                )
-            ),
-            e('div', { className: "text-center text-lg font-bold my-4" }, `Total Cost: $${(supplyOrder.beans * configs.supplyCosts.beans + supplyOrder.milk * configs.supplyCosts.milk).toFixed(2)}`),
-            e(shadcn.DialogFooter, null,
-                e('div', { className: "flex gap-4 w-full" },
-                    e(shadcn.Button, { onClick: () => setShowSupplyModal(false), className: "w-1/2 bg-gray-500 hover:bg-gray-600" }, "Cancel"),
-                    e(shadcn.Button, { 
-                        onClick: handleSupplyOrder, 
-                        className: "w-1/2",
-                        disabled: (supplyOrder.beans * configs.supplyCosts.beans + supplyOrder.milk * configs.supplyCosts.milk) > gameState.money || (supplyOrder.beans <= 0 && supplyOrder.milk <= 0)
-                    }, "Order Supplies")
-                )
-            )
-        )
-    );
 
     const renderRunningPhase = () => e('div', { className: "flex flex-col lg:flex-row gap-8" },
         e('div', { className: "lg:w-2/3 flex flex-col gap-4" },
@@ -611,9 +559,8 @@ const App = () => {
             // Consolidated action buttons
             e('div', { className: "bg-white p-6 rounded-2xl shadow-lg" },
                 e('h3', { className: "text-xl font-bold text-gray-700 mb-4" }, "Actions"),
-                e('div', { className: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4" },
+                e('div', { className: "grid grid-cols-1 sm:grid-cols-2 gap-4" },
                     e(shadcn.Button, { onClick: () => handleAction('show_prices') }, "Adjust Prices"),
-                    e(shadcn.Button, { onClick: () => handleAction('show_supplies') }, "Order Supplies"),
                     e(shadcn.Button, { onClick: () => handleAction('take_loan'), disabled: !!gameState.loan }, "Take Loan ($10,000)")
                 )
             ),
@@ -643,8 +590,20 @@ const App = () => {
             ),
             e('div', { className: "mt-6 pt-6 border-t border-gray-200" },
                 e('h3', { className: "text-xl font-bold text-gray-700 mb-2" }, "Inventory"),
-                e('div', { className: "flex justify-between items-center" }, e('span', { className: "font-semibold text-gray-600" }, "Coffee Beans:"), e('span', { className: "text-gray-800 font-medium" }, `${gameState.inventory.beans} cups`)),
-                e('div', { className: "flex justify-between items-center" }, e('span', { className: "font-semibold text-gray-600" }, "Milk:"), e('span', { className: "text-gray-800 font-medium" }, `${gameState.inventory.milk} cups`)),
+                e('div', { className: "flex justify-between items-center mb-2" }, 
+                    e('span', { className: "font-semibold text-gray-600" }, "Coffee Beans:"), 
+                    e('div', { className: "flex items-center gap-2" },
+                        e('span', { className: "text-gray-800 font-medium" }, `${gameState.inventory.beans} cups`),
+                        e(shadcn.Button, { onClick: () => handleAction('order_beans'), className: "px-3 py-1 text-sm" }, "Order")
+                    )
+                ),
+                e('div', { className: "flex justify-between items-center" }, 
+                    e('span', { className: "font-semibold text-gray-600" }, "Milk:"), 
+                    e('div', { className: "flex items-center gap-2" },
+                        e('span', { className: "text-gray-800 font-medium" }, `${gameState.inventory.milk} cups`),
+                        e(shadcn.Button, { onClick: () => handleAction('order_milk'), className: "px-3 py-1 text-sm" }, "Order")
+                    )
+                ),
                 gameState.inventory.beans < 100 && e('p', { className: "text-red-500 mt-2 animate-pulse" }, "Running low on beans!"),
                 gameState.inventory.milk < 100 && e('p', { className: "text-red-500 mt-2 animate-pulse" }, "Running low on milk!")
             ),
@@ -661,8 +620,7 @@ const App = () => {
             gameState.phase === 'planning' ? renderPlanningPhase() : renderRunningPhase()
         ),
         e(MessageBox, null),
-        renderPriceModal(),
-        renderSupplyModal()
+        renderPriceModal()
     );
 };
 
