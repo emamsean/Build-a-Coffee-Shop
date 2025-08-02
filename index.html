@@ -33,6 +33,12 @@
 <script type="text/javascript">
 "use strict";
 
+// Set up a global error handler to catch any uncaught exceptions
+window.onerror = function (message, source, lineno, colno, error) {
+    console.error("Global error caught:", { message, source, lineno, colno, error });
+    // You could also display this error to the user in a message box
+};
+
 const e = React.createElement;
 
 // Mock shadcn/ui components with improved styling for clarity
@@ -127,6 +133,7 @@ const configs = {
 const weatherConditions = ['Sunny', 'Rainy', 'Cloudy'];
 
 const App = () => {
+    console.log("App component is rendering...");
     const [gameState, setGameState] = React.useState({
         phase: 'planning', // 'planning', 'running', 'gameover'
         money: 50000,
@@ -212,8 +219,12 @@ const App = () => {
     // --- Running Phase Logic ---
     React.useEffect(() => {
         if (gameState.phase === 'running') {
+            console.log("Starting game loop...");
             gameInterval.current = setInterval(gameLoop, 1500); // Day = 1.5s
-            return () => clearInterval(gameInterval.current);
+            return () => {
+                console.log("Clearing game loop interval.");
+                clearInterval(gameInterval.current);
+            };
         }
     }, [gameState.phase]);
     
@@ -625,8 +636,15 @@ const App = () => {
 };
 
 // Use ReactDOM to render the App component
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(e(App, null));
+try {
+    console.log("Attempting to render App component...");
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(e(App, null));
+    console.log("Render successful!");
+} catch (error) {
+    console.error("Failed to render App component:", error);
+}
+
 </script>
 </body>
 </html>
