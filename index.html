@@ -24,86 +24,48 @@
 </head>
 <body class="bg-gray-100 font-inter">
 
-<div id="root"></div>
+<div id="root" class="bg-gray-100 flex flex-col items-center justify-start min-h-screen p-4">
+    <div id="game-container" class="bg-white rounded-2xl shadow-2xl p-6 md:p-10 max-w-5xl w-full flex flex-col gap-8">
+        <h1 class="text-4xl font-bold text-center text-gray-800 mb-6">Coffee Shop Simulator</h1>
+        <div id="game-content"></div>
+    </div>
+    <!-- Modal for messages -->
+    <div id="message-box" class="fixed inset-0 bg-gray-500/50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white border border-gray-300 rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+            <h3 id="message-title" class="text-2xl font-bold text-gray-900 mb-4"></h3>
+            <p id="message-text" class="text-gray-700 mb-6"></p>
+            <div class="flex justify-center">
+                <button id="message-close-btn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">OK</button>
+            </div>
+        </div>
+    </div>
+    <!-- Modal for prices -->
+    <div id="price-modal" class="fixed inset-0 bg-gray-500/50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white border border-gray-300 rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+            <div class="space-y-2">
+                <h3 class="text-2xl font-bold text-gray-900 mb-4">Adjust Menu Prices</h3>
+                <p class="text-gray-700 mb-6">Set the price for your coffee.</p>
+            </div>
+            <div class="grid gap-4 py-4">
+                <div class="grid grid-cols-4 items-center gap-4">
+                    <label for="price-input" class="col-span-2 text-right block text-lg font-medium text-gray-700">Coffee</label>
+                    <input id="price-input" type="number" class="col-span-2 mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
+                </div>
+            </div>
+            <div class="flex justify-center">
+                <button id="price-close-btn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 
-<!-- React and ReactDOM scripts from CDN -->
-<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/react-dom@18/umd/react.production.min.js" crossorigin></script>
-
-<script type="text/javascript">
+<script>
 "use strict";
 
-// Set up a global error handler to catch any uncaught exceptions
-window.onerror = function (message, source, lineno, colno, error) {
-    console.error("Global error caught:", { message, source, lineno, colno, error });
-    // You could also display this error to the user in a message box
-};
-
-const e = React.createElement;
-
-// Mock shadcn/ui components with improved styling for clarity
-const shadcn = {
-  // A lighter, less opaque overlay and a standard white modal content
-  Dialog: ({ open, children }) => open ? e('div', { className: "fixed inset-0 bg-gray-500/50 flex items-center justify-center p-4 z-50" }, children) : null,
-  DialogContent: ({ children, ...props }) => e('div', { className: "bg-white border border-gray-300 rounded-2xl shadow-xl p-8 max-w-md w-full text-center", ...props }, children),
-  DialogHeader: ({ children }) => e('div', { className: "space-y-2" }, children),
-  DialogTitle: ({ children }) => e('h3', { className: "text-2xl font-bold text-gray-900 mb-4" }, children),
-  DialogDescription: ({ children }) => e('p', { className: "text-gray-700 mb-6" }, children),
-  DialogFooter: ({ children }) => e('div', { className: "flex justify-center" }, children),
-  Button: ({ children, onClick, ...props }) => e('button', { className: `bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 ${props.disabled ? 'bg-gray-400 cursor-not-allowed' : ''}`, onClick: onClick, ...props }, children),
-  Input: ({ ...props }) => e('input', { className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2", ...props }),
-  Label: ({ children, ...props }) => e('label', { className: "block text-lg font-medium text-gray-700", ...props }, children),
-};
-
-// CSS for the App
-const AppCSS = `
-  .animate-pulse {
-    animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: .5; }
-  }
-  .log-item {
-    transition: opacity 0.5s ease-in-out;
-  }
-`;
-
-// Helper function to show alerts without blocking the UI
-const useMessageBox = () => {
-  const [modalState, setModalState] = React.useState({
-    isOpen: false,
-    title: '',
-    message: '',
-    onClose: () => {},
-  });
-
-  const showMessage = (title, message, onClose = () => {}) => {
-    setModalState({
-      isOpen: true,
-      title,
-      message,
-      onClose: () => {
-        setModalState((prev) => ({ ...prev, isOpen: false }));
-        onClose();
-      },
-    });
-  };
-
-  const MessageBox = () => e(shadcn.Dialog, { open: modalState.isOpen },
-    e(shadcn.DialogContent, { className: "sm:max-w-[425px]" },
-      e(shadcn.DialogHeader, null,
-        e(shadcn.DialogTitle, null, modalState.title)
-      ),
-      e(shadcn.DialogDescription, null, modalState.message),
-      e(shadcn.DialogFooter, null,
-        e(shadcn.Button, { onClick: modalState.onClose }, "OK")
-      )
-    )
-  );
-
-  return [showMessage, MessageBox];
-};
+// --- Global state and configurations ---
+let gameState = {};
+let planningState = {};
+let gameInterval = null;
 
 // Data configurations, simplified to one menu item
 const configs = {
@@ -132,10 +94,486 @@ const configs = {
 
 const weatherConditions = ['Sunny', 'Rainy', 'Cloudy'];
 
-const App = () => {
-    console.log("App component is rendering...");
-    const [gameState, setGameState] = React.useState({
-        phase: 'planning', // 'planning', 'running', 'gameover'
+// --- Helper Functions for UI ---
+const showMessage = (title, message, onClose = () => {}) => {
+    document.getElementById('message-title').innerText = title;
+    document.getElementById('message-text').innerText = message;
+    document.getElementById('message-box').classList.remove('hidden');
+    const closeBtn = document.getElementById('message-close-btn');
+    closeBtn.onclick = () => {
+        document.getElementById('message-box').classList.add('hidden');
+        onClose();
+    };
+};
+
+const showPriceModal = () => {
+    const priceModal = document.getElementById('price-modal');
+    priceModal.classList.remove('hidden');
+    const priceInput = document.getElementById('price-input');
+    priceInput.value = gameState.menuPrices.coffee;
+
+    priceInput.onchange = (e) => {
+        const newPrice = parseInt(e.target.value) || 0;
+        if (newPrice > 0) {
+             gameState.menuPrices.coffee = newPrice;
+             addLog(`You adjusted the price of coffee to $${newPrice}.`, 'daily', 'text-teal-600');
+        }
+    };
+    
+    const closeBtn = document.getElementById('price-close-btn');
+    closeBtn.onclick = () => {
+        priceModal.classList.add('hidden');
+        render();
+    };
+};
+
+// --- Game Logic Functions ---
+const addLog = (message, type = 'daily', color = 'text-gray-600') => {
+    const newLogEntry = { message, color, day: gameState.day };
+    if (type === 'event') {
+        gameState.eventLog.unshift(newLogEntry);
+        gameState.eventLog = gameState.eventLog.slice(0, 10);
+    } else {
+        gameState.dailyLog.unshift(newLogEntry);
+        gameState.dailyLog = gameState.dailyLog.slice(0, 20);
+    }
+};
+
+const endGame = (message) => {
+    clearInterval(gameInterval);
+    gameState.isGameOver = true;
+    gameState.phase = 'gameover';
+    showMessage("Game Over", message, () => window.location.reload());
+};
+
+const handleRandomEvent = () => {
+  const eventChance = Math.random();
+  if (eventChance < 0.1) { // 10% chance per day
+    const events = [
+      { type: 'positive', message: 'A local food blogger gave you a great review! Reputation boosted!', action: () => {
+        gameState.reputation = Math.min(1.0, gameState.reputation + 0.05);
+        addLog("A popular food blogger posted a rave review of your shop! Reputation boosted!", 'event', 'text-green-600 font-bold');
+      }},
+      { type: 'negative', message: 'Oh no! Your espresso machine broke down. Repairs will cost $5,000.', action: () => {
+        gameState.money -= 5000;
+        gameState.equipmentHealth = 0.5;
+        addLog("Equipment breakdown! Repairs cost $5,000. Your equipment health is now 50%.", 'event', 'text-red-600 font-bold');
+      }},
+      { type: 'neutral', message: 'A local competitor is offering a new deal. You chose to ignore it, but your reputation took a small hit.', action: () => {
+        gameState.reputation = Math.max(0.1, gameState.reputation - 0.03);
+        addLog("You noticed a competitor's new deal. You chose to ignore it, which slightly impacted your reputation.", 'event', 'text-yellow-600 font-bold');
+      }},
+    ];
+
+    const event = events[Math.floor(Math.random() * events.length)];
+    event.action();
+  }
+};
+
+const gameLoop = () => {
+    if (gameState.isGameOver) return;
+    
+    gameState.day++;
+    const newMonth = Math.floor(gameState.day / 30);
+    const isMonthEnd = gameState.day % 30 === 0;
+
+    // Monthly expenses
+    if (isMonthEnd) {
+        const totalMonthlyExpenses = gameState.rent + (gameState.loan ? gameState.loan.payment : 0);
+        gameState.money -= totalMonthlyExpenses;
+        addLog(`End of Month ${newMonth}: Paid rent ($${gameState.rent}) and loan payments ($${gameState.loan ? gameState.loan.payment : 0}). Total: $${totalMonthlyExpenses}.`, 'daily', 'text-red-600');
+        if (gameState.money <= 0) {
+            endGame(`You ran out of money at the end of the month! Your shop has closed.`);
+            return;
+        }
+    }
+
+    // Natural decay
+    gameState.baristas.forEach(b => b.morale = Math.max(0, b.morale - 0.005));
+    gameState.equipmentHealth = Math.max(0, gameState.equipmentHealth - 0.005);
+    
+    // Random events
+    handleRandomEvent();
+    
+    // Generate weather and day of the week
+    gameState.weather = weatherConditions[Math.floor(Math.random() * weatherConditions.length)];
+    const isWeekend = (gameState.day % 7 === 6 || gameState.day % 7 === 0);
+
+    // Calculate daily income
+    const { locationConfig, supplierConfig, equipmentConfig } = gameState.businessPlan;
+    let dailyTraffic = (gameState.customers === 0 ? gameState.businessPlan.marketingBudget / 50 : gameState.customers) * locationConfig.customerTraffic;
+    
+    if (isWeekend) dailyTraffic *= 1.5;
+    if (gameState.weather === 'Rainy') dailyTraffic *= 1.2;
+    
+    let customersToday = Math.floor(dailyTraffic * gameState.reputation * (1 - locationConfig.competition/10));
+    
+    // Inventory & sales logic, simplified to one item
+    let revenue = 0;
+    let totalIngredientCosts = 0;
+    let servedCustomers = 0;
+
+    const maxCups = Math.min(gameState.inventory.beans, gameState.inventory.milk);
+    const cupsToSell = Math.min(customersToday, maxCups);
+    
+    if (cupsToSell > 0) {
+        servedCustomers = cupsToSell;
+        revenue = (servedCustomers * gameState.menuPrices.coffee);
+        totalIngredientCosts = (servedCustomers * (supplierConfig.costPerCup + configs.supplyCosts.milk)); // A single cost calculation
+    }
+
+    const dailyProfit = revenue - totalIngredientCosts;
+    gameState.money += dailyProfit;
+
+    // Update reputation
+    const qualityFactor = (equipmentConfig.quality + supplierConfig.qualityFactor) / 2;
+    const moraleFactor = gameState.baristas.reduce((sum, b) => sum + b.morale, 0) / (gameState.baristas.length || 1);
+    gameState.reputation = Math.max(0.1, Math.min(1.0, gameState.reputation + ((qualityFactor * moraleFactor) - gameState.reputation) * 0.01));
+    
+    // Log daily summary
+    addLog(`Served ${servedCustomers} customers. Daily revenue: $${revenue.toFixed(2)}. Profit: $${dailyProfit.toFixed(2)}.`, 'daily', dailyProfit > 0 ? 'text-green-600' : 'text-red-600');
+
+    // Update inventory
+    gameState.inventory.beans -= servedCustomers;
+    gameState.inventory.milk -= servedCustomers;
+
+    // Update customers
+    gameState.customers += Math.floor(servedCustomers * 0.1);
+
+    // Check for game over
+    if (gameState.money <= 0) {
+        endGame(`You ran out of money on day ${gameState.day}! Your coffee shop has closed.`);
+        return;
+    } else if (gameState.customers >= 100000) {
+        endGame(`Congratulations! You reached 100,000 customers in ${gameState.day} days and built a coffee empire! You win!`);
+        return;
+    }
+
+    render();
+};
+
+const handleAction = (actionType) => {
+    switch (actionType) {
+        case 'market':
+            if (gameState.money >= 1000) {
+                gameState.money -= 1000;
+                gameState.customers += Math.floor(Math.random() * 1000) + 200;
+                addLog("You ran a marketing campaign and gained new customers!", 'daily', 'text-blue-600');
+            } else { showMessage("Not Enough Money", "You don't have enough cash for a marketing campaign."); }
+            break;
+        case 'hire':
+            if (gameState.money >= 2500) {
+                gameState.money -= 2500;
+                const newBarista = {
+                    id: gameState.baristas.length,
+                    morale: 1.0,
+                    salary: 2500,
+                    skills: { speed: Math.random() * 0.5 + 0.5, quality: Math.random() * 0.5 + 0.5 },
+                };
+                gameState.baristas.push(newBarista);
+                addLog("You hired a new barista! Service speed should improve.", 'daily', 'text-indigo-600');
+            } else { showMessage("Not Enough Money", "You don't have enough cash to hire a new barista."); }
+            break;
+        case 'upgrade':
+            const currentEquipment = configs.equipment[gameState.equipment];
+            let upgradeCost;
+            let newEquipment;
+            if (gameState.equipment === 'basic') { upgradeCost = 20000; newEquipment = 'standard'; }
+            else if (gameState.equipment === 'standard') { upgradeCost = 30000; newEquipment = 'pro'; }
+            else { showMessage("Maxed out", "Your equipment is already at the highest level."); return; }
+
+            if (gameState.money >= upgradeCost) {
+                gameState.money -= upgradeCost;
+                gameState.equipment = newEquipment;
+                addLog(`You upgraded your equipment to ${configs.equipment[newEquipment].name}!`, 'event', 'text-yellow-600');
+            } else { showMessage("Not Enough Money", `You can't afford the ${configs.equipment[newEquipment].name} upgrade.`); }
+            break;
+        case 'take_loan':
+            if (!gameState.loan) {
+                gameState.loan = { amount: 10000, payment: 1000 };
+                gameState.money += 10000;
+                addLog('You took out a $10,000 loan with a $1,000 monthly payment.', 'event', 'text-green-600');
+            } else { showMessage("Already have a loan", "You can only have one loan at a time."); }
+            break;
+        case 'order_beans':
+            const beansCost = configs.supplyOrderSize * configs.supplyCosts.beans;
+            if (gameState.money >= beansCost) {
+                gameState.money -= beansCost;
+                gameState.inventory.beans += configs.supplyOrderSize;
+                addLog(`Ordered ${configs.supplyOrderSize} cups of coffee beans for $${beansCost.toFixed(2)}.`, 'daily', 'text-green-600');
+            } else { showMessage("Not Enough Money", "You don't have enough cash to order more coffee beans."); }
+            break;
+        case 'order_milk':
+            const milkCost = configs.supplyOrderSize * configs.supplyCosts.milk;
+            if (gameState.money >= milkCost) {
+                gameState.money -= milkCost;
+                gameState.inventory.milk += configs.supplyOrderSize;
+                addLog(`Ordered ${configs.supplyOrderSize} cups of milk for $${milkCost.toFixed(2)}.`, 'daily', 'text-green-600');
+            } else { showMessage("Not Enough Money", "You don't have enough cash to order more milk."); }
+            break;
+        case 'show_prices':
+            showPriceModal();
+            break;
+    }
+    render();
+};
+
+const handlePlanFinalization = () => {
+    const plan = planningState;
+    const equipmentConfig = configs.equipment[plan.equipment];
+    const upfrontCost = equipmentConfig.cost + plan.baristaCount * 2500 + plan.marketingBudget;
+
+    if (50000 - upfrontCost < 0) {
+        showMessage("Not Enough Capital", "Your upfront costs exceed your starting capital. Please adjust your business plan.");
+        return;
+    }
+
+    const newBaristas = Array.from({ length: plan.baristaCount }, (_, i) => ({
+        id: i, morale: 1.0, salary: 2500,
+        skills: { speed: Math.random() * 0.5 + 0.5, quality: Math.random() * 0.5 + 0.5 },
+    }));
+
+    gameState = {
+        phase: 'running',
+        money: 50000 - upfrontCost,
+        initialCapital: 50000,
+        day: 0, month: 0, customers: 0, reputation: 0.5, baristas: newBaristas,
+        equipment: plan.equipment, rent: configs.locations[plan.location].rent,
+        menuPrices: { coffee: 3 }, dailyLog: [], eventLog: [], isGameOver: false,
+        businessPlan: {
+            ...plan, upfrontCost,
+            locationConfig: configs.locations[plan.location],
+            equipmentConfig: equipmentConfig,
+            supplierConfig: configs.suppliers[plan.supplier],
+        },
+        inventory: { beans: 500, milk: 500 },
+        loan: null, weather: 'Sunny', equipmentHealth: 1.0,
+    };
+
+    gameInterval = setInterval(gameLoop, 1500); // Day = 1.5s
+    render();
+};
+
+// --- Rendering functions ---
+const renderPlanningPhase = () => {
+    let content = '';
+    const plan = planningState;
+
+    // Step 1
+    if (plan.step === 1) {
+        content = `
+            <div class="space-y-6">
+                <label class="block text-lg font-medium text-gray-700">Shop Name</label>
+                <input type="text" value="${plan.shopName}" oninput="planningState.shopName = this.value" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2" placeholder="e.g., The Daily Grind">
+                <label class="block text-lg font-medium text-gray-700">Location</label>
+                <select onchange="planningState.location = this.value" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                    <option value="downtown" ${plan.location === 'downtown' ? 'selected' : ''}>$15,000 Rent/Month (High Traffic)</option>
+                    <option value="suburbs" ${plan.location === 'suburbs' ? 'selected' : ''}>$5,000 Rent/Month (Moderate Traffic)</option>
+                    <option value="college" ${plan.location === 'college' ? 'selected' : ''}>$10,000 Rent/Month (High Student Traffic)</option>
+                </select>
+                <button onclick="planningState.step = 2; render()" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Next</button>
+            </div>
+        `;
+    } 
+    // Step 2
+    else if (plan.step === 2) {
+        content = `
+            <div class="space-y-6">
+                <label class="block text-lg font-medium text-gray-700">Equipment</label>
+                <select onchange="planningState.equipment = this.value" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                    <option value="basic" ${plan.equipment === 'basic' ? 'selected' : ''}>$10,000 (Slow, Low Quality)</option>
+                    <option value="standard" ${plan.equipment === 'standard' ? 'selected' : ''}>$25,000 (Average Speed, Good Quality)</option>
+                    <option value="pro" ${plan.equipment === 'pro' ? 'selected' : ''}>$40,000 (Fast, High Quality)</option>
+                </select>
+                <label class="block text-lg font-medium text-gray-700">Coffee Bean Supplier</label>
+                <select onchange="planningState.supplier = this.value" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                    <option value="budget" ${plan.supplier === 'budget' ? 'selected' : ''}>Budget Beans ($1.00/cup)</option>
+                    <option value="premium" ${plan.supplier === 'premium' ? 'selected' : ''}>Premium Beans ($2.00/cup)</option>
+                    <option value="gourmet" ${plan.supplier === 'gourmet' ? 'selected' : ''}>Gourmet Beans ($3.00/cup)</option>
+                </select>
+                <div class="flex gap-4">
+                    <button onclick="planningState.step = 1; render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Previous</button>
+                    <button onclick="planningState.step = 3; render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Next</button>
+                </div>
+            </div>
+        `;
+    } 
+    // Step 3
+    else if (plan.step === 3) {
+        content = `
+            <div class="space-y-6">
+                <label class="block text-lg font-medium text-gray-700">Initial Baristas</label>
+                <input type="number" min="1" max="5" value="${plan.baristaCount}" oninput="planningState.baristaCount = parseInt(this.value)" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
+                <p class="text-sm text-gray-500">Each costs $2,500 upfront and in monthly salary.</p>
+                <label class="block text-lg font-medium text-gray-700">Initial Marketing Budget</label>
+                <input type="number" min="0" max="10000" step="500" value="${plan.marketingBudget}" oninput="planningState.marketingBudget = parseInt(this.value)" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
+                <p class="text-sm text-gray-500">One-time spend to get the word out on opening day.</p>
+                <div class="flex gap-4">
+                    <button onclick="planningState.step = 2; render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Previous</button>
+                    <button onclick="planningState.step = 4; render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Next</button>
+                </div>
+            </div>
+        `;
+    } 
+    // Step 4
+    else if (plan.step === 4) {
+        const upfrontCost = configs.equipment[plan.equipment].cost + plan.baristaCount * 2500 + plan.marketingBudget;
+        const startingCash = 50000 - upfrontCost;
+        content = `
+            <div class="space-y-6">
+                <h3 class="text-xl font-bold text-gray-700 text-center">Finalize Your Plan</h3>
+                <div class="bg-gray-50 rounded-xl p-6 shadow-inner space-y-3">
+                    <p><span>Shop Name:</span> ${plan.shopName}</p>
+                    <p><span>Location:</span> ${configs.locations[plan.location].name}</p>
+                    <p><span>Equipment:</span> ${configs.equipment[plan.equipment].name}</p>
+                    <p><span>Supplier:</span> ${configs.suppliers[plan.supplier].name}</p>
+                    <p><span>Baristas:</span> ${plan.baristaCount}</p>
+                    <p><span>Initial Marketing:</span> $${plan.marketingBudget.toLocaleString()}</p>
+                    <p class="font-bold"><span>Upfront Cost:</span> $${upfrontCost.toLocaleString()}</p>
+                    <p class="font-bold"><span>Starting Cash:</span> $${startingCash.toLocaleString()}</p>
+                </div>
+                <div class="flex gap-4">
+                    <button onclick="planningState.step = 3; render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Previous</button>
+                    <button onclick="handlePlanFinalization()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Open for Business!</button>
+                </div>
+            </div>
+        `;
+    }
+
+    document.getElementById('game-content').innerHTML = `
+        <div class="flex flex-col gap-6">
+            <h2 class="text-2xl font-semibold text-gray-700 text-center mb-4">Phase 1: Build Your Business Plan</h2>
+            <div class="flex justify-center items-center gap-2 mb-6">
+                ${[1, 2, 3, 4].map(step => `<div class="w-4 h-4 rounded-full step-indicator ${planningState.step === step ? 'bg-indigo-500' : planningState.step > step ? 'bg-green-500' : 'bg-gray-300'}"></div>`).join('')}
+            </div>
+            ${content}
+        </div>
+    `;
+};
+
+const renderRunningPhase = () => {
+    const dailyLogHTML = gameState.dailyLog.map((entry, index) => `<div class="${entry.color}">${entry.message}</div>`).join('');
+    const eventLogHTML = gameState.eventLog.length > 0 ? 
+        gameState.eventLog.map((entry, index) => `<div class="${entry.color}">${entry.message}</div>`).join('') : 
+        '<div>No special events yet.</div>';
+    
+    document.getElementById('game-content').innerHTML = `
+        <div class="flex flex-col lg:flex-row gap-8">
+            <div class="lg:w-2/3 flex flex-col gap-4">
+                <!-- Status Cards -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div class="bg-green-100 text-green-800 p-4 rounded-xl shadow-md text-center"> 
+                        <div class="font-bold text-lg">Cash</div> 
+                        <div class="text-2xl font-semibold">$${gameState.money.toLocaleString()}</div>
+                    </div>
+                    <div class="bg-blue-100 text-blue-800 p-4 rounded-xl shadow-md text-center flex flex-col justify-between"> 
+                        <div>
+                            <div class="font-bold text-lg">Customers</div>
+                            <div class="text-2xl font-semibold">${gameState.customers.toLocaleString()}</div>
+                        </div>
+                        <button onclick="handleAction('market')" ${gameState.money < 1000 ? 'disabled' : ''} class="mt-2 px-3 py-1 text-sm bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl transition duration-300 ${gameState.money < 1000 ? 'bg-gray-400 cursor-not-allowed' : ''}">Run Ad Campaign</button>
+                    </div>
+                    <div class="bg-purple-100 text-purple-800 p-4 rounded-xl shadow-md text-center"> 
+                        <div class="font-bold text-lg">Reputation</div> 
+                        <div class="text-2xl font-semibold">${(gameState.reputation * 100).toFixed(0)}%</div>
+                    </div>
+                    <div class="bg-orange-100 text-orange-800 p-4 rounded-xl shadow-md text-center"> 
+                        <div class="font-bold text-lg">Day</div> 
+                        <div class="text-2xl font-semibold">${gameState.day}</div>
+                    </div>
+                </div>
+                <!-- Action Buttons -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <div class="bg-gray-100 text-gray-800 p-4 rounded-xl shadow-md text-center flex flex-col justify-between"> 
+                        <div>
+                            <div class="font-bold text-lg">Baristas</div>
+                            <div class="text-2xl font-semibold">${gameState.baristas.length}</div>
+                        </div>
+                        <button onclick="handleAction('hire')" ${gameState.money < 2500 ? 'disabled' : ''} class="mt-2 px-3 py-1 text-sm bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl transition duration-300 ${gameState.money < 2500 ? 'bg-gray-400 cursor-not-allowed' : ''}">Hire Barista</button>
+                    </div>
+                    <div class="bg-gray-100 text-gray-800 p-4 rounded-xl shadow-md text-center flex flex-col justify-between"> 
+                        <div>
+                            <div class="font-bold text-lg">Equipment Health</div>
+                            <div class="text-2xl font-semibold">${(gameState.equipmentHealth * 100).toFixed(0)}%</div>
+                        </div>
+                        <button onclick="handleAction('upgrade')" ${gameState.money < 20000 || gameState.equipment === 'pro' ? 'disabled' : ''} class="mt-2 px-3 py-1 text-sm bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl transition duration-300 ${gameState.money < 20000 || gameState.equipment === 'pro' ? 'bg-gray-400 cursor-not-allowed' : ''}">Upgrade Equipment</button>
+                    </div>
+                    <div class="bg-gray-100 text-gray-800 p-4 rounded-xl shadow-md text-center"> 
+                        <div class="font-bold text-lg">Weather</div> 
+                        <div class="text-2xl font-semibold">${gameState.weather}</div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <h3 class="text-xl font-bold text-gray-700 mb-4">Actions</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <button onclick="handleAction('show_prices')" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Adjust Prices</button>
+                        <button onclick="handleAction('take_loan')" ${!!gameState.loan ? 'disabled' : ''} class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 ${!!gameState.loan ? 'bg-gray-400 cursor-not-allowed' : ''}">Take Loan ($10,000)</button>
+                    </div>
+                </div>
+                <!-- Logs -->
+                <div class="flex flex-col md:flex-row gap-4 flex-grow">
+                    <div class="md:w-1/2 bg-gray-50 rounded-xl p-4 shadow-inner overflow-y-auto h-48">
+                        <h2 class="text-xl font-bold text-gray-700 mb-2">Daily Log</h2>
+                        <div class="text-sm text-gray-600 space-y-1">
+                            ${dailyLogHTML}
+                        </div>
+                    </div>
+                    <div class="md:w-1/2 bg-gray-50 rounded-xl p-4 shadow-inner overflow-y-auto h-48">
+                        <h2 class="text-xl font-bold text-gray-700 mb-2">Special Events</h2>
+                        <div class="text-sm text-gray-600 space-y-1">
+                            ${eventLogHTML}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Shop Details & Inventory -->
+            <div class="lg:w-1/3 flex flex-col gap-4 bg-gray-50 rounded-2xl p-6 shadow-lg">
+                <h2 class="text-2xl font-bold text-gray-700 mb-4">Shop Details</h2>
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center"><span class="font-semibold text-gray-600">Name:</span><span class="text-gray-800 font-medium">${gameState.businessPlan.shopName}</span></div>
+                    <div class="flex justify-between items-center"><span class="font-semibold text-gray-600">Monthly Rent:</span><span class="text-gray-800 font-medium">$${gameState.rent.toLocaleString()}</span></div>
+                    ${gameState.loan ? `<div class="flex justify-between items-center"><span class="font-semibold text-gray-600">Loan Payment:</span><span class="text-gray-800 font-medium">$${gameState.loan.payment.toLocaleString()}/mo</span></div>` : ''}
+                    <div class="flex justify-between items-center"><span class="font-semibold text-gray-600">Equipment:</span><span class="text-gray-800 font-medium">${configs.equipment[gameState.equipment].name}</span></div>
+                </div>
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <h3 class="text-xl font-bold text-gray-700 mb-2">Inventory</h3>
+                    <div class="flex justify-between items-center mb-2"> 
+                        <span class="font-semibold text-gray-600">Coffee Beans:</span> 
+                        <div class="flex items-center gap-2">
+                            <span class="text-gray-800 font-medium">${gameState.inventory.beans} cups</span>
+                            <button onclick="handleAction('order_beans')" class="px-3 py-1 text-sm bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl transition duration-300">Order</button>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center"> 
+                        <span class="font-semibold text-gray-600">Milk:</span> 
+                        <div class="flex items-center gap-2">
+                            <span class="text-gray-800 font-medium">${gameState.inventory.milk} cups</span>
+                            <button onclick="handleAction('order_milk')" class="px-3 py-1 text-sm bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl transition duration-300">Order</button>
+                        </div>
+                    </div>
+                    ${gameState.inventory.beans < 100 ? '<p class="text-red-500 mt-2 animate-pulse">Running low on beans!</p>' : ''}
+                    ${gameState.inventory.milk < 100 ? '<p class="text-red-500 mt-2 animate-pulse">Running low on milk!</p>' : ''}
+                </div>
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <button onclick="window.location.reload()" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-xl transition duration-300">Restart Game</button>
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+const render = () => {
+    if (gameState.phase === 'planning') {
+        renderPlanningPhase();
+    } else {
+        renderRunningPhase();
+    }
+};
+
+const init = () => {
+    // Initial state setup
+    gameState = {
+        phase: 'planning',
         money: 50000,
         initialCapital: 50000,
         day: 0,
@@ -145,18 +583,18 @@ const App = () => {
         baristas: [],
         equipment: 'basic',
         rent: 0,
-        menuPrices: { coffee: 3 }, // Simplified to one item
-        dailyLog: [], // Separated daily log
-        eventLog: [], // New log for special events
+        menuPrices: { coffee: 3 },
+        dailyLog: [],
+        eventLog: [],
         isGameOver: false,
         businessPlan: {},
-        inventory: { beans: 500, milk: 500 }, // in cups
+        inventory: { beans: 500, milk: 500 },
         loan: null,
         weather: 'Sunny',
         equipmentHealth: 1.0,
-    });
-
-    const [planningState, setPlanningState] = React.useState({
+    };
+    
+    planningState = {
         step: 1,
         shopName: 'The Daily Grind',
         location: 'downtown',
@@ -164,487 +602,12 @@ const App = () => {
         supplier: 'budget',
         baristaCount: 1,
         marketingBudget: 1000,
-    });
-
-    // New state for the price adjustment modal
-    const [showPriceModal, setShowPriceModal] = React.useState(false);
-
-    const [showMessage, MessageBox] = useMessageBox();
-
-    const gameInterval = React.useRef(null);
-
-    // --- Planning Phase Logic ---
-    const updateStep = (newStep) => {
-        setPlanningState((prev) => ({ ...prev, step: newStep }));
     };
 
-    const handlePlanFinalization = () => {
-        const plan = planningState;
-        const equipmentConfig = configs.equipment[plan.equipment];
-        const upfrontCost = equipmentConfig.cost + plan.baristaCount * 2500 + plan.marketingBudget;
-
-        if (gameState.initialCapital - upfrontCost < 0) {
-            showMessage("Not Enough Capital", "Your upfront costs exceed your starting capital. Please adjust your business plan.");
-            return;
-        }
-
-        const newBaristas = Array.from({ length: plan.baristaCount }, (_, i) => ({
-            id: i,
-            morale: 1.0,
-            salary: 2500,
-            skills: {
-                speed: Math.random() * 0.5 + 0.5, // 0.5 to 1.0
-                quality: Math.random() * 0.5 + 0.5,
-            },
-        }));
-
-        setGameState((prev) => ({
-            ...prev,
-            phase: 'running',
-            money: prev.initialCapital - upfrontCost,
-            rent: configs.locations[plan.location].rent,
-            baristas: newBaristas,
-            equipment: plan.equipment,
-            reputation: (equipmentConfig.quality + configs.suppliers[plan.supplier].qualityFactor) / 2,
-            businessPlan: {
-                ...plan,
-                upfrontCost,
-                locationConfig: configs.locations[plan.location],
-                equipmentConfig: equipmentConfig,
-                supplierConfig: configs.suppliers[plan.supplier],
-            },
-        }));
-    };
-
-    // --- Running Phase Logic ---
-    React.useEffect(() => {
-        if (gameState.phase === 'running') {
-            console.log("Starting game loop...");
-            gameInterval.current = setInterval(gameLoop, 1500); // Day = 1.5s
-            return () => {
-                console.log("Clearing game loop interval.");
-                clearInterval(gameInterval.current);
-            };
-        }
-    }, [gameState.phase]);
-    
-    // New function to add log entries with a type
-    const addLog = (message, type = 'daily', color = 'text-gray-600') => {
-        setGameState((prev) => {
-            const newLogEntry = { message, color, day: prev.day };
-            if (type === 'event') {
-                return { ...prev, eventLog: [newLogEntry, ...prev.eventLog].slice(0, 10) };
-            } else {
-                return { ...prev, dailyLog: [newLogEntry, ...prev.dailyLog].slice(0, 20) };
-            }
-        });
-    };
-
-    const endGame = (message) => {
-        clearInterval(gameInterval.current);
-        setGameState((prev) => ({ ...prev, isGameOver: true, phase: 'gameover' }));
-        showMessage("Game Over", message, () => window.location.reload());
-    };
-
-    const handleRandomEvent = () => {
-      const eventChance = Math.random();
-      if (eventChance < 0.1) { // 10% chance per day
-        const events = [
-          { type: 'positive', message: 'A local food blogger gave you a great review! Reputation boosted!', action: () => {
-            setGameState(prev => ({ ...prev, reputation: Math.min(1.0, prev.reputation + 0.05) }));
-            addLog("A popular food blogger posted a rave review of your shop! Reputation boosted!", 'event', 'text-green-600 font-bold');
-          }},
-          { type: 'negative', message: 'Oh no! Your espresso machine broke down. Repairs will cost $5,000.', action: () => {
-            setGameState(prev => ({ ...prev, money: prev.money - 5000, equipmentHealth: 0.5 }));
-            addLog("Equipment breakdown! Repairs cost $5,000. Your equipment health is now 50%.", 'event', 'text-red-600 font-bold');
-          }},
-          { type: 'neutral', message: 'A local competitor is offering a new deal. You chose to ignore it, but your reputation took a small hit.', action: () => {
-            setGameState(prev => ({ ...prev, reputation: Math.max(0.1, prev.reputation - 0.03) }));
-            addLog("You noticed a competitor's new deal. You chose to ignore it, which slightly impacted your reputation.", 'event', 'text-yellow-600 font-bold');
-          }},
-        ];
-
-        const event = events[Math.floor(Math.random() * events.length)];
-        event.action();
-      }
-    };
-
-    const gameLoop = () => {
-        setGameState((prev) => {
-            if (prev.isGameOver) return prev;
-            
-            const day = prev.day + 1;
-            const newMonth = Math.floor(day / 30);
-            const isMonthEnd = day % 30 === 0;
-
-            // Monthly expenses
-            if (isMonthEnd) {
-                const totalMonthlyExpenses = prev.rent + (prev.loan ? prev.loan.payment : 0);
-                const newMoney = prev.money - totalMonthlyExpenses;
-                addLog(`End of Month ${newMonth}: Paid rent ($${prev.rent}) and loan payments ($${prev.loan ? prev.loan.payment : 0}). Total: $${totalMonthlyExpenses}.`, 'daily', 'text-red-600');
-                if (newMoney <= 0) {
-                    endGame(`You ran out of money at the end of the month! Your shop has closed.`);
-                    return prev; // Return previous state to prevent further updates
-                }
-            }
-
-            // Natural decay
-            const newBaristas = prev.baristas.map(b => ({ ...b, morale: Math.max(0, b.morale - 0.005) }));
-            const newEquipmentHealth = Math.max(0, prev.equipmentHealth - 0.005);
-            
-            // Random events
-            handleRandomEvent();
-            
-            // Generate weather and day of the week
-            const newWeather = weatherConditions[Math.floor(Math.random() * weatherConditions.length)];
-            const isWeekend = (day % 7 === 6 || day % 7 === 0);
-
-            // Calculate daily income
-            const { locationConfig, equipmentConfig, supplierConfig } = prev.businessPlan;
-            let dailyTraffic = (prev.customers === 0 ? prev.businessPlan.marketingBudget / 50 : prev.customers) * locationConfig.customerTraffic;
-            
-            if (isWeekend) dailyTraffic *= 1.5;
-            if (newWeather === 'Rainy') dailyTraffic *= 1.2;
-            
-            let customersToday = Math.floor(dailyTraffic * prev.reputation * (1 - locationConfig.competition/10));
-            
-            // Inventory & sales logic, simplified to one item
-            let revenue = 0;
-            let totalIngredientCosts = 0;
-            let servedCustomers = 0;
-
-            const maxCups = Math.min(prev.inventory.beans, prev.inventory.milk);
-            const cupsToSell = Math.min(customersToday, maxCups);
-            
-            if (cupsToSell > 0) {
-                servedCustomers = cupsToSell;
-                
-                const sales = { coffee: servedCustomers };
-                
-                revenue = (sales.coffee * prev.menuPrices.coffee);
-                totalIngredientCosts = (sales.coffee * (supplierConfig.costPerCup + 0.5)); // A single cost calculation
-            }
-
-            const dailyProfit = revenue - totalIngredientCosts;
-            const newMoney = prev.money + dailyProfit;
-
-            // Update reputation
-            const qualityFactor = (equipmentConfig.quality + supplierConfig.qualityFactor) / 2;
-            const moraleFactor = prev.baristas.reduce((sum, b) => sum + b.morale, 0) / (prev.baristas.length || 1);
-            const newReputation = Math.max(0.1, Math.min(1.0, prev.reputation + ((qualityFactor * moraleFactor) - prev.reputation) * 0.01));
-
-            // Log daily summary
-            addLog(`Served ${servedCustomers} customers. Daily revenue: $${revenue.toFixed(2)}. Profit: $${dailyProfit.toFixed(2)}.`, 'daily', dailyProfit > 0 ? 'text-green-600' : 'text-red-600');
-
-            // Check for game over
-            if (newMoney <= 0) {
-                endGame(`You ran out of money on day ${day}! Your coffee shop has closed.`);
-                return prev;
-            } else if (prev.customers >= 100000) {
-                endGame(`Congratulations! You reached 100,000 customers in ${day} days and built a coffee empire! You win!`);
-                return prev;
-            }
-
-            return {
-                ...prev,
-                day,
-                month: newMonth,
-                money: newMoney,
-                customers: prev.customers + Math.floor(servedCustomers * 0.1),
-                reputation: newReputation,
-                inventory: {
-                    beans: prev.inventory.beans - servedCustomers,
-                    milk: prev.inventory.milk - servedCustomers
-                },
-                baristas: newBaristas,
-                equipmentHealth: newEquipmentHealth,
-                weather: newWeather,
-            };
-        });
-    };
-
-    // Action button handlers
-    const handleAction = (actionType) => {
-      setGameState(prev => {
-        let newGameState = { ...prev };
-        switch (actionType) {
-          case 'market':
-            if (newGameState.money >= 1000) {
-              newGameState.money -= 1000;
-              newGameState.customers += Math.floor(Math.random() * 1000) + 200;
-              addLog("You ran a marketing campaign and gained new customers!", 'daily', 'text-blue-600');
-            } else { showMessage("Not Enough Money", "You don't have enough cash for a marketing campaign."); }
-            break;
-          case 'hire':
-            if (newGameState.money >= 2500) {
-              newGameState.money -= 2500;
-              const newBarista = {
-                id: newGameState.baristas.length,
-                morale: 1.0,
-                salary: 2500,
-                skills: { speed: Math.random() * 0.5 + 0.5, quality: Math.random() * 0.5 + 0.5 },
-              };
-              newGameState.baristas = [...newGameState.baristas, newBarista];
-              addLog("You hired a new barista! Service speed should improve.", 'daily', 'text-indigo-600');
-            } else { showMessage("Not Enough Money", "You don't have enough cash to hire a new barista."); }
-            break;
-          case 'upgrade':
-            if (newGameState.equipment === 'basic' && newGameState.money >= 20000) {
-              newGameState.money -= 20000;
-              newGameState.equipment = 'standard';
-              addLog('You upgraded your equipment to Standard!', 'event', 'text-yellow-600');
-            } else if (newGameState.equipment === 'standard' && newGameState.money >= 30000) {
-              newGameState.money -= 30000;
-              newGameState.equipment = 'pro';
-              addLog('You upgraded to top-of-the-line Pro equipment!', 'event', 'text-yellow-600');
-            } else { showMessage("Not Enough Money", "You can't afford the next equipment upgrade."); }
-            break;
-          case 'take_loan':
-            if (!newGameState.loan) {
-              newGameState.loan = { amount: 10000, payment: 1000 };
-              newGameState.money += 10000;
-              addLog('You took out a $10,000 loan with a $1,000 monthly payment.', 'event', 'text-green-600');
-            } else { showMessage("Already have a loan", "You can only have one loan at a time."); }
-            break;
-          case 'order_beans':
-            const beansCost = configs.supplyOrderSize * configs.supplyCosts.beans;
-            if (newGameState.money >= beansCost) {
-                newGameState.money -= beansCost;
-                newGameState.inventory.beans += configs.supplyOrderSize;
-                addLog(`Ordered ${configs.supplyOrderSize} cups of coffee beans for $${beansCost.toFixed(2)}.`, 'daily', 'text-green-600');
-            } else { showMessage("Not Enough Money", "You don't have enough cash to order more coffee beans."); }
-            break;
-          case 'order_milk':
-            const milkCost = configs.supplyOrderSize * configs.supplyCosts.milk;
-            if (newGameState.money >= milkCost) {
-                newGameState.money -= milkCost;
-                newGameState.inventory.milk += configs.supplyOrderSize;
-                addLog(`Ordered ${configs.supplyOrderSize} cups of milk for $${milkCost.toFixed(2)}.`, 'daily', 'text-green-600');
-            } else { showMessage("Not Enough Money", "You don't have enough cash to order more milk."); }
-            break;
-          case 'show_prices':
-            setShowPriceModal(true);
-            break;
-        }
-        return newGameState;
-      });
-    };
-    
-    // This function is for handling price changes from the new modal
-    const handlePriceChange = (item, newPrice) => {
-      setGameState(prev => {
-        const newMenuPrices = { ...prev.menuPrices, [item]: newPrice };
-        addLog(`You adjusted the price of ${configs.menuItems.find(i => i.id === item).name} to $${newPrice}.`, 'daily', 'text-teal-600');
-        return { ...prev, menuPrices: newMenuPrices };
-      });
-    };
-
-    // --- Rendering Logic ---
-    const renderPlanningPhase = () => e('div', { className: "flex flex-col gap-6" },
-        e('h2', { className: "text-2xl font-semibold text-gray-700 text-center mb-4" }, "Phase 1: Build Your Business Plan"),
-        e('div', { className: "flex justify-center items-center gap-2 mb-6" },
-            [1, 2, 3, 4].map(step => e('div', { key: step, className: `w-4 h-4 rounded-full step-indicator ${planningState.step === step ? 'bg-indigo-500' : planningState.step > step ? 'bg-green-500' : 'bg-gray-300'}` }))
-        ),
-        planningState.step === 1 && e('div', { className: "space-y-6" },
-            e(shadcn.Label, { className: "block text-lg font-medium text-gray-700" }, "Shop Name"),
-            e(shadcn.Input, { type: "text", value: planningState.shopName, onChange: e => setPlanningState(p => ({ ...p, shopName: e.target.value })), placeholder: "e.g., The Daily Grind" }),
-            e(shadcn.Label, { className: "block text-lg font-medium text-gray-700" }, "Location"),
-            e('select', { className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2", value: planningState.location, onChange: e => setPlanningState(p => ({ ...p, location: e.target.value })) },
-                e('option', { value: "downtown" }, "$15,000 Rent/Month (High Traffic)"),
-                e('option', { value: "suburbs" }, "$5,000 Rent/Month (Moderate Traffic)"),
-                e('option', { value: "college" }, "$10,000 Rent/Month (High Student Traffic)")
-            ),
-            e(shadcn.Button, { onClick: () => updateStep(2), className: "w-full" }, "Next")
-        ),
-        planningState.step === 2 && e('div', { className: "space-y-6" },
-            e(shadcn.Label, { className: "block text-lg font-medium text-gray-700" }, "Equipment"),
-            e('select', { className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2", value: planningState.equipment, onChange: e => setPlanningState(p => ({ ...p, equipment: e.target.value })) },
-                e('option', { value: "basic" }, "$10,000 (Slow, Low Quality)"),
-                e('option', { value: "standard" }, "$25,000 (Average Speed, Good Quality)"),
-                e('option', { value: "pro" }, "$40,000 (Fast, High Quality)")
-            ),
-            e(shadcn.Label, { className: "block text-lg font-medium text-gray-700" }, "Coffee Bean Supplier"),
-            e('select', { className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2", value: planningState.supplier, onChange: e => setPlanningState(p => ({ ...p, supplier: e.target.value })) },
-                e('option', { value: "budget" }, "Budget Beans ($1.00/cup)"),
-                e('option', { value: "premium" }, "Premium Beans ($2.00/cup)"),
-                e('option', { value: "gourmet" }, "Gourmet Beans ($3.00/cup)")
-            ),
-            e('div', { className: "flex gap-4" },
-                e(shadcn.Button, { onClick: () => updateStep(1), className: "w-1/2" }, "Previous"),
-                e(shadcn.Button, { onClick: () => updateStep(3), className: "w-1/2" }, "Next")
-            )
-        ),
-        planningState.step === 3 && e('div', { className: "space-y-6" },
-            e(shadcn.Label, { className: "block text-lg font-medium text-gray-700" }, "Initial Baristas"),
-            e(shadcn.Input, { type: "number", min: "1", max: "5", value: planningState.baristaCount, onChange: e => setPlanningState(p => ({ ...p, baristaCount: parseInt(e.target.value) })) }),
-            e('p', { className: "text-sm text-gray-500" }, "Each costs $2,500 upfront and in monthly salary."),
-            e(shadcn.Label, { className: "block text-lg font-medium text-gray-700" }, "Initial Marketing Budget"),
-            e(shadcn.Input, { type: "number", min: "0", max: "10000", step: "500", value: planningState.marketingBudget, onChange: e => setPlanningState(p => ({ ...p, marketingBudget: parseInt(e.target.value) })) }),
-            e('p', { className: "text-sm text-gray-500" }, "One-time spend to get the word out on opening day."),
-            e('div', { className: "flex gap-4" },
-                e(shadcn.Button, { onClick: () => updateStep(2), className: "w-1/2" }, "Previous"),
-                e(shadcn.Button, { onClick: () => updateStep(4), className: "w-1/2" }, "Next")
-            )
-        ),
-        planningState.step === 4 && e('div', { className: "space-y-6" },
-            e('h3', { className: "text-xl font-bold text-gray-700 text-center" }, "Finalize Your Plan"),
-            e('div', { className: "bg-gray-50 rounded-xl p-6 shadow-inner space-y-3" },
-                e('p', null, e('span', { className: "font-semibold" }, "Shop Name:"), ` ${planningState.shopName}`),
-                e('p', null, e('span', { className: "font-semibold" }, "Location:"), ` ${configs.locations[planningState.location].name}`),
-                e('p', null, e('span', { className: "font-semibold" }, "Equipment:"), ` ${configs.equipment[planningState.equipment].name}`),
-                e('p', null, e('span', { className: "font-semibold" }, "Supplier:"), ` ${configs.suppliers[planningState.supplier].name}`),
-                e('p', null, e('span', { className: "font-semibold" }, "Baristas:"), ` ${planningState.baristaCount}`),
-                e('p', null, e('span', { className: "font-semibold" }, "Initial Marketing:"), ` $${planningState.marketingBudget.toLocaleString()}`),
-                e('p', { className: "font-bold" }, e('span', { className: "font-semibold" }, "Upfront Cost:"), ` $${(configs.equipment[planningState.equipment].cost + planningState.baristaCount * 2500 + planningState.marketingBudget).toLocaleString()}`),
-                e('p', { className: "font-bold" }, e('span', { className: "font-semibold" }, "Starting Cash:"), ` $${(gameState.initialCapital - (configs.equipment[planningState.equipment].cost + planningState.baristaCount * 2500 + planningState.marketingBudget)).toLocaleString()}`)
-            ),
-            e('div', { className: "flex gap-4" },
-                e(shadcn.Button, { onClick: () => updateStep(3), className: "w-1/2" }, "Previous"),
-                e(shadcn.Button, { onClick: handlePlanFinalization, className: "w-1/2" }, "Open for Business!")
-            )
-        )
-    );
-
-    const renderPriceModal = () => e(shadcn.Dialog, { open: showPriceModal },
-        e(shadcn.DialogContent, { className: "sm:max-w-[425px]" },
-            e(shadcn.DialogHeader, null,
-                e(shadcn.DialogTitle, null, "Adjust Menu Prices"),
-                e(shadcn.DialogDescription, null, "Set the price for your coffee.")
-            ),
-            e('div', { className: "grid gap-4 py-4" },
-                configs.menuItems.map(item => e('div', { key: item.id, className: "grid grid-cols-4 items-center gap-4" },
-                    e(shadcn.Label, { htmlFor: item.id, className: "col-span-2 text-right" }, item.name),
-                    e(shadcn.Input, { 
-                        id: item.id, 
-                        type: "number", 
-                        value: gameState.menuPrices[item.id], 
-                        onChange: e => handlePriceChange(item.id, parseInt(e.target.value) || 0),
-                        className: "col-span-2"
-                    })
-                ))
-            ),
-            e(shadcn.DialogFooter, null,
-                e(shadcn.Button, { onClick: () => setShowPriceModal(false) }, "Close")
-            )
-        )
-    );
-
-
-    const renderRunningPhase = () => e('div', { className: "flex flex-col lg:flex-row gap-8" },
-        e('div', { className: "lg:w-2/3 flex flex-col gap-4" },
-            // Re-arranged the status cards to be more interactive
-            e('div', { className: "grid grid-cols-2 sm:grid-cols-4 gap-4" },
-                e('div', { className: "bg-green-100 text-green-800 p-4 rounded-xl shadow-md text-center" }, 
-                    e('div', { className: "font-bold text-lg" }, "Cash"), 
-                    e('div', { className: "text-2xl font-semibold" }, `$${gameState.money.toLocaleString()}`)
-                ),
-                e('div', { className: "bg-blue-100 text-blue-800 p-4 rounded-xl shadow-md text-center flex flex-col justify-between" }, 
-                    e('div', null, e('div', { className: "font-bold text-lg" }, "Customers"), e('div', { className: "text-2xl font-semibold" }, gameState.customers.toLocaleString())),
-                    e(shadcn.Button, { onClick: () => handleAction('market'), disabled: gameState.money < 1000, className: "mt-2 px-3 py-1 text-sm" }, "Run Ad Campaign")
-                ),
-                e('div', { className: "bg-purple-100 text-purple-800 p-4 rounded-xl shadow-md text-center" }, 
-                    e('div', { className: "font-bold text-lg" }, "Reputation"), 
-                    e('div', { className: "text-2xl font-semibold" }, `${(gameState.reputation * 100).toFixed(0)}%`)
-                ),
-                e('div', { className: "bg-orange-100 text-orange-800 p-4 rounded-xl shadow-md text-center" }, 
-                    e('div', { className: "font-bold text-lg" }, "Day"), 
-                    e('div', { className: "text-2xl font-semibold" }, gameState.day)
-                )
-            ),
-            // Moved buttons to be next to their corresponding stats
-            e('div', { className: "grid grid-cols-2 sm:grid-cols-3 gap-4" },
-                e('div', { className: "bg-gray-100 text-gray-800 p-4 rounded-xl shadow-md text-center flex flex-col justify-between" }, 
-                    e('div', null, e('div', { className: "font-bold text-lg" }, "Baristas"), e('div', { className: "text-2xl font-semibold" }, gameState.baristas.length)),
-                    e(shadcn.Button, { onClick: () => handleAction('hire'), disabled: gameState.money < 2500, className: "mt-2 px-3 py-1 text-sm" }, "Hire Barista")
-                ),
-                e('div', { className: "bg-gray-100 text-gray-800 p-4 rounded-xl shadow-md text-center flex flex-col justify-between" }, 
-                    e('div', null, e('div', { className: "font-bold text-lg" }, "Equipment Health"), e('div', { className: "text-2xl font-semibold" }, `${(gameState.equipmentHealth * 100).toFixed(0)}%`)),
-                    e(shadcn.Button, { onClick: () => handleAction('upgrade'), disabled: gameState.money < 20000 || gameState.equipment === 'pro', className: "mt-2 px-3 py-1 text-sm" }, "Upgrade Equipment")
-                ),
-                e('div', { className: "bg-gray-100 text-gray-800 p-4 rounded-xl shadow-md text-center" }, 
-                    e('div', { className: "font-bold text-lg" }, "Weather"), 
-                    e('div', { className: "text-2xl font-semibold" }, gameState.weather)
-                )
-            ),
-
-            // Consolidated action buttons
-            e('div', { className: "bg-white p-6 rounded-2xl shadow-lg" },
-                e('h3', { className: "text-xl font-bold text-gray-700 mb-4" }, "Actions"),
-                e('div', { className: "grid grid-cols-1 sm:grid-cols-2 gap-4" },
-                    e(shadcn.Button, { onClick: () => handleAction('show_prices') }, "Adjust Prices"),
-                    e(shadcn.Button, { onClick: () => handleAction('take_loan'), disabled: !!gameState.loan }, "Take Loan ($10,000)")
-                )
-            ),
-            
-            e('div', { className: "flex flex-col md:flex-row gap-4 flex-grow" },
-              e('div', { className: "md:w-1/2 bg-gray-50 rounded-xl p-4 shadow-inner overflow-y-auto h-48" },
-                  e('h2', { className: "text-xl font-bold text-gray-700 mb-2" }, "Daily Log"),
-                  e('div', { className: "text-sm text-gray-600 space-y-1" },
-                      gameState.dailyLog.map((entry, index) => e('div', { key: index, className: `log-item ${entry.color}` }, `Day ${entry.day}: ${entry.message}`))
-                  )
-              ),
-              e('div', { className: "md:w-1/2 bg-gray-50 rounded-xl p-4 shadow-inner overflow-y-auto h-48" },
-                  e('h2', { className: "text-xl font-bold text-gray-700 mb-2" }, "Special Events"),
-                  e('div', { className: "text-sm text-gray-600 space-y-1" },
-                      gameState.eventLog.length > 0 ? gameState.eventLog.map((entry, index) => e('div', { key: index, className: `log-item ${entry.color}` }, `Day ${entry.day}: ${entry.message}`)) : e('div', null, "No special events yet.")
-                  )
-              )
-            )
-        ),
-        e('div', { className: "lg:w-1/3 flex flex-col gap-4 bg-gray-50 rounded-2xl p-6 shadow-lg" },
-            e('h2', { className: "text-2xl font-bold text-gray-700 mb-4" }, "Shop Details"),
-            e('div', { className: "space-y-4" },
-                e('div', { className: "flex justify-between items-center" }, e('span', { className: "font-semibold text-gray-600" }, "Name:"), e('span', { className: "text-gray-800 font-medium" }, gameState.businessPlan.shopName)),
-                e('div', { className: "flex justify-between items-center" }, e('span', { className: "font-semibold text-gray-600" }, "Monthly Rent:"), e('span', { className: "text-gray-800 font-medium" }, `$${gameState.rent.toLocaleString()}`)),
-                gameState.loan && e('div', { className: "flex justify-between items-center" }, e('span', { className: "font-semibold text-gray-600" }, "Loan Payment:"), e('span', { className: "text-gray-800 font-medium" }, `$${gameState.loan.payment.toLocaleString()}/mo`)),
-                e('div', { className: "flex justify-between items-center" }, e('span', { className: "font-semibold text-gray-600" }, "Equipment:"), e('span', { className: "text-gray-800 font-medium" }, configs.equipment[gameState.equipment].name))
-            ),
-            e('div', { className: "mt-6 pt-6 border-t border-gray-200" },
-                e('h3', { className: "text-xl font-bold text-gray-700 mb-2" }, "Inventory"),
-                e('div', { className: "flex justify-between items-center mb-2" }, 
-                    e('span', { className: "font-semibold text-gray-600" }, "Coffee Beans:"), 
-                    e('div', { className: "flex items-center gap-2" },
-                        e('span', { className: "text-gray-800 font-medium" }, `${gameState.inventory.beans} cups`),
-                        e(shadcn.Button, { onClick: () => handleAction('order_beans'), className: "px-3 py-1 text-sm" }, "Order")
-                    )
-                ),
-                e('div', { className: "flex justify-between items-center" }, 
-                    e('span', { className: "font-semibold text-gray-600" }, "Milk:"), 
-                    e('div', { className: "flex items-center gap-2" },
-                        e('span', { className: "text-gray-800 font-medium" }, `${gameState.inventory.milk} cups`),
-                        e(shadcn.Button, { onClick: () => handleAction('order_milk'), className: "px-3 py-1 text-sm" }, "Order")
-                    )
-                ),
-                gameState.inventory.beans < 100 && e('p', { className: "text-red-500 mt-2 animate-pulse" }, "Running low on beans!"),
-                gameState.inventory.milk < 100 && e('p', { className: "text-red-500 mt-2 animate-pulse" }, "Running low on milk!")
-            ),
-            e('div', { className: "mt-6 pt-6 border-t border-gray-200" },
-                e(shadcn.Button, { onClick: () => window.location.reload(), className: "w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3" }, "Restart Game")
-            )
-        )
-    );
-
-    return e('div', { className: "bg-gray-100 flex flex-col items-center justify-start min-h-screen p-4" },
-        e('style', null, AppCSS),
-        e('div', { className: "bg-white rounded-2xl shadow-2xl p-6 md:p-10 max-w-5xl w-full flex flex-col gap-8" },
-            e('h1', { className: "text-4xl font-bold text-center text-gray-800 mb-6" }, "Coffee Shop Simulator"),
-            gameState.phase === 'planning' ? renderPlanningPhase() : renderRunningPhase()
-        ),
-        e(MessageBox, null),
-        renderPriceModal()
-    );
+    render();
 };
 
-// Use ReactDOM to render the App component
-try {
-    console.log("Attempting to render App component...");
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(e(App, null));
-    console.log("Render successful!");
-} catch (error) {
-    console.error("Failed to render App component:", error);
-}
-
+window.onload = init;
 </script>
 </body>
 </html>
