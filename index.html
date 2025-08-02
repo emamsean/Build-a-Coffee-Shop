@@ -46,9 +46,7 @@ const shadcn = {
   Button: ({ children, onClick, ...props }) => e('button', { className: `bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 ${props.disabled ? 'bg-gray-400 cursor-not-allowed' : ''}`, onClick: onClick, ...props }, children),
   Input: ({ ...props }) => e('input', { className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2", ...props }),
   Label: ({ children, ...props }) => e('label', { className: "block text-lg font-medium text-gray-700", ...props }, children),
-  Popover: ({ children }) => e('div', { className: "relative" }, children),
-  PopoverTrigger: ({ children }) => e('div', null, children),
-  PopoverContent: ({ children }) => e('div', { className: "absolute z-50 bg-white rounded-xl shadow-xl p-4", style: { minWidth: '15rem' } }, children),
+  // Popover components are no longer needed for the price menu
 };
 
 // CSS for the App
@@ -159,6 +157,8 @@ const App = () => {
         baristaCount: 1,
         marketingBudget: 1000,
     });
+
+    const [showPriceModal, setShowPriceModal] = React.useState(false); // State for the new price modal
 
     const [showMessage, MessageBox] = useMessageBox();
 
@@ -411,11 +411,15 @@ const App = () => {
               addLog('You took out a $10,000 loan with a $1,000 monthly payment.', 'text-green-600');
             } else { showMessage("Already have a loan", "You can only have one loan at a time."); }
             break;
+          case 'show_prices': // A new action to open the modal
+            setShowPriceModal(true);
+            break;
         }
         return newGameState;
       });
     };
     
+    // This function is for handling price changes from the new modal
     const handlePriceChange = (item, newPrice) => {
       setGameState(prev => {
         const newMenuPrices = { ...prev.menuPrices, [item]: newPrice };
@@ -490,6 +494,30 @@ const App = () => {
         )
     );
 
+    const renderPriceModal = () => e(shadcn.Dialog, { open: showPriceModal },
+        e(shadcn.DialogContent, { className: "sm:max-w-[425px]" },
+            e(shadcn.DialogHeader, null,
+                e(shadcn.DialogTitle, null, "Adjust Menu Prices"),
+                e(shadcn.DialogDescription, null, "Set the price for each of your coffee shop's menu items.")
+            ),
+            e('div', { className: "grid gap-4 py-4" },
+                configs.menuItems.map(item => e('div', { key: item.id, className: "grid grid-cols-4 items-center gap-4" },
+                    e(shadcn.Label, { htmlFor: item.id, className: "col-span-2 text-right" }, item.name),
+                    e(shadcn.Input, { 
+                        id: item.id, 
+                        type: "number", 
+                        value: gameState.menuPrices[item.id], 
+                        onChange: e => handlePriceChange(item.id, parseInt(e.target.value) || 0), // Use || 0 to prevent NaN
+                        className: "col-span-2"
+                    })
+                ))
+            ),
+            e(shadcn.DialogFooter, null,
+                e(shadcn.Button, { onClick: () => setShowPriceModal(false) }, "Close")
+            )
+        )
+    );
+
     const renderRunningPhase = () => e('div', { className: "flex flex-col lg:flex-row gap-8" },
         e('div', { className: "lg:w-2/3 flex flex-col gap-4" },
             // Re-arranged the status cards to be more interactive
@@ -531,23 +559,8 @@ const App = () => {
             e('div', { className: "bg-white p-6 rounded-2xl shadow-lg" },
                 e('h3', { className: "text-xl font-bold text-gray-700 mb-4" }, "Actions"),
                 e('div', { className: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4" },
-                    e(shadcn.Popover, null,
-                        e(shadcn.PopoverTrigger, { asChild: true },
-                            e(shadcn.Button, null, "Adjust Prices")
-                        ),
-                        e(shadcn.PopoverContent, { className: "w-80" },
-                            e('div', { className: "grid gap-4" },
-                                e('div', { className: "space-y-2" },
-                                    e('h4', { className: "font-medium leading-none" }, "Menu Prices"),
-                                    e('p', { className: "text-sm text-muted-foreground" }, "Set prices for your menu items.")
-                                ),
-                                configs.menuItems.map(item => e('div', { key: item.id, className: "grid grid-cols-3 items-center gap-4" },
-                                    e(shadcn.Label, { htmlFor: item.id }, item.name),
-                                    e(shadcn.Input, { id: item.id, type: "number", value: gameState.menuPrices[item.id], onChange: e => handlePriceChange(item.id, parseInt(e.target.value)) })
-                                ))
-                            )
-                        )
-                    ),
+                    // The button now opens the modal
+                    e(shadcn.Button, { onClick: () => handleAction('show_prices') }, "Adjust Prices"),
                     e(shadcn.Button, { onClick: () => handleAction('take_loan'), disabled: !!gameState.loan }, "Take Loan ($10,000)")
                 )
             ),
@@ -587,7 +600,8 @@ const App = () => {
             e('h1', { className: "text-4xl font-bold text-center text-gray-800 mb-6" }, "Coffee Shop Simulator"),
             gameState.phase === 'planning' ? renderPlanningPhase() : renderRunningPhase()
         ),
-        e(MessageBox, null)
+        e(MessageBox, null),
+        renderPriceModal() // Render the new modal here
     );
 };
 
@@ -597,3 +611,4 @@ root.render(e(App, null));
 </script>
 </body>
 </html>
+
