@@ -275,12 +275,18 @@ const handleAction = (actionType) => {
             } else { showMessage("Not Enough Money", "You don't have enough cash to hire a new barista."); }
             break;
         case 'upgrade':
-            const currentEquipment = configs.equipment[gameState.equipment];
             let upgradeCost;
             let newEquipment;
-            if (gameState.equipment === 'basic') { upgradeCost = 20000; newEquipment = 'standard'; }
-            else if (gameState.equipment === 'standard') { upgradeCost = 30000; newEquipment = 'pro'; }
-            else { showMessage("Maxed out", "Your equipment is already at the highest level."); return; }
+            if (gameState.equipment === 'basic') {
+                newEquipment = 'standard';
+                upgradeCost = configs.equipment.standard.cost - configs.equipment.basic.cost;
+            } else if (gameState.equipment === 'standard') {
+                newEquipment = 'pro';
+                upgradeCost = configs.equipment.pro.cost - configs.equipment.standard.cost;
+            } else {
+                showMessage("Maxed out", "Your equipment is already at the highest level.");
+                return;
+            }
 
             if (gameState.money >= upgradeCost) {
                 gameState.money -= upgradeCost;
@@ -452,6 +458,24 @@ const renderPlanningPhase = () => {
 };
 
 const renderRunningPhase = () => {
+    // Determine the next equipment upgrade and cost dynamically
+    let nextUpgradeText = '';
+    let nextUpgradeCost = 0;
+    let isUpgradeAvailable = false;
+    
+    if (gameState.equipment === 'basic') {
+        nextUpgradeText = `Upgrade to Standard ($${configs.equipment.standard.cost - configs.equipment.basic.cost})`;
+        nextUpgradeCost = configs.equipment.standard.cost - configs.equipment.basic.cost;
+        isUpgradeAvailable = true;
+    } else if (gameState.equipment === 'standard') {
+        nextUpgradeText = `Upgrade to Pro ($${configs.equipment.pro.cost - configs.equipment.standard.cost})`;
+        nextUpgradeCost = configs.equipment.pro.cost - configs.equipment.standard.cost;
+        isUpgradeAvailable = true;
+    } else {
+        nextUpgradeText = 'Max Equipment Level Reached';
+        isUpgradeAvailable = false;
+    }
+
     const dailyLogHTML = gameState.dailyLog.map((entry, index) => `<div class="${entry.color}">${entry.message}</div>`).join('');
     const eventLogHTML = gameState.eventLog.length > 0 ? 
         gameState.eventLog.map((entry, index) => `<div class="${entry.color}">${entry.message}</div>`).join('') : 
@@ -496,7 +520,7 @@ const renderRunningPhase = () => {
                             <div class="font-bold text-lg">Equipment Health</div>
                             <div class="text-2xl font-semibold">${(gameState.equipmentHealth * 100).toFixed(0)}%</div>
                         </div>
-                        <button onclick="handleAction('upgrade')" ${gameState.money < 20000 || gameState.equipment === 'pro' ? 'disabled' : ''} class="mt-2 px-3 py-1 text-sm bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl transition duration-300 ${gameState.money < 20000 || gameState.equipment === 'pro' ? 'bg-gray-400 cursor-not-allowed' : ''}">Upgrade Equipment</button>
+                        <button onclick="handleAction('upgrade')" ${!isUpgradeAvailable || gameState.money < nextUpgradeCost ? 'disabled' : ''} class="mt-2 px-3 py-1 text-sm bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl transition duration-300 ${!isUpgradeAvailable || gameState.money < nextUpgradeCost ? 'bg-gray-400 cursor-not-allowed' : ''}">${nextUpgradeText}</button>
                     </div>
                     <div class="bg-gray-100 text-gray-800 p-4 rounded-xl shadow-md text-center"> 
                         <div class="font-bold text-lg">Weather</div> 
@@ -609,3 +633,4 @@ window.onload = init;
 </script>
 </body>
 </html>
+
