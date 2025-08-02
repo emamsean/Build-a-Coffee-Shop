@@ -232,36 +232,22 @@ const App = () => {
       const eventChance = Math.random();
       if (eventChance < 0.1) { // 10% chance per day
         const events = [
-          { type: 'positive', title: 'Local Food Blogger!', message: 'A local food blogger gave you a great review! Reputation boosted!', action: () => {
+          { type: 'positive', message: 'A local food blogger gave you a great review! Reputation boosted!', action: () => {
             setGameState(prev => ({ ...prev, reputation: Math.min(1.0, prev.reputation + 0.05) }));
-            addLog("A popular food blogger posted a rave review of your shop! Reputation boosted!", 'text-green-600');
+            addLog("A popular food blogger posted a rave review of your shop! Reputation boosted!", 'text-green-600 font-bold');
           }},
-          { type: 'negative', title: 'Equipment Breakdown!', message: 'Oh no! Your espresso machine broke down. Repairs will cost $5,000.', action: () => {
+          { type: 'negative', message: 'Oh no! Your espresso machine broke down. Repairs will cost $5,000.', action: () => {
             setGameState(prev => ({ ...prev, money: prev.money - 5000, equipmentHealth: 0.5 }));
-            addLog("Equipment breakdown! Repairs cost $5,000. Your equipment health is now 50%.", 'text-red-600');
+            addLog("Equipment breakdown! Repairs cost $5,000. Your equipment health is now 50%.", 'text-red-600 font-bold');
           }},
-          { type: 'choice', title: 'Competitor\'s Deal', message: 'A local competitor is offering a new deal. What do you do?', options: [
-            { text: 'Ignore it', action: () => addLog("You ignored the competitor. Your reputation took a small hit.", 'text-yellow-600') },
-            { text: 'Lower prices to compete', action: () => {
-              setGameState(prev => ({ ...prev, reputation: Math.max(0.1, prev.reputation - 0.03) }));
-              addLog("You tried to compete, but it hurt your profits. Reputation slightly decreased.", 'text-red-600');
-            }},
-          ]},
+          { type: 'neutral', message: 'A local competitor is offering a new deal. You chose to ignore it, but your reputation took a small hit.', action: () => {
+            setGameState(prev => ({ ...prev, reputation: Math.max(0.1, prev.reputation - 0.03) }));
+            addLog("You noticed a competitor's new deal. You chose to ignore it, which slightly impacted your reputation.", 'text-yellow-600 font-bold');
+          }},
         ];
 
         const event = events[Math.floor(Math.random() * events.length)];
-        // The showMessage function handles displaying the message box
-        if (event.type === 'positive' || event.type === 'negative') {
-            showMessage(event.title, event.message, event.action);
-        } else {
-            // Choice events are handled differently
-            const messageWithChoices = `${event.message}\n\n1. ${event.options[0].text}\n2. ${event.options[1].text}`;
-            showMessage(event.title, messageWithChoices, () => {
-                // In a real application, you'd present buttons for the user to choose.
-                // For this version, we will just log a default action.
-                addLog("You chose to ignore the competitor's deal.", 'text-yellow-600');
-            });
-        }
+        event.action();
       }
     };
 
