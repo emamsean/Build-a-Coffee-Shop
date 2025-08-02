@@ -88,8 +88,8 @@ const configs = {
         { id: 'coffee', name: 'Coffee', baseCost: 1.5, basePrice: 3, qualityFactor: 1.0 },
     ],
     baristaSkills: ['Speed', 'Quality', 'Charm'],
-    supplyCosts: { beans: 1.0, milk: 0.5 }, // Cost per cup
-    supplyOrderSize: 10000, // Fixed amount to order, increased to 10000
+    supplyCosts: { coffeeCup: 1.0 }, // Combined cost for beans, milk, and cup
+    supplyOrderSize: 10000, // Fixed amount to order
 };
 
 const weatherConditions = ['Sunny', 'Rainy', 'Cloudy'];
@@ -213,13 +213,15 @@ const gameLoop = () => {
     let totalIngredientCosts = 0;
     let servedCustomers = 0;
 
-    const maxCups = Math.min(gameState.inventory.beans, gameState.inventory.milk);
-    const cupsToSell = Math.min(customersToday, maxCups);
+    // The cost of supplies now includes the supplier cost
+    const costPerCup = supplierConfig.costPerCup + configs.supplyCosts.coffeeCup;
+
+    const cupsToSell = Math.min(customersToday, gameState.inventory.coffeeCups);
     
     if (cupsToSell > 0) {
         servedCustomers = cupsToSell;
         revenue = (servedCustomers * gameState.menuPrices.coffee);
-        totalIngredientCosts = (servedCustomers * (supplierConfig.costPerCup + configs.supplyCosts.milk)); // A single cost calculation
+        totalIngredientCosts = (servedCustomers * costPerCup); 
     }
 
     const dailyProfit = revenue - totalIngredientCosts;
@@ -234,8 +236,7 @@ const gameLoop = () => {
     addLog(`Served ${servedCustomers} customers. Daily revenue: $${revenue.toFixed(2)}. Profit: $${dailyProfit.toFixed(2)}.`, 'daily', dailyProfit > 0 ? 'text-green-600' : 'text-red-600');
 
     // Update inventory
-    gameState.inventory.beans -= servedCustomers;
-    gameState.inventory.milk -= servedCustomers;
+    gameState.inventory.coffeeCups -= servedCustomers;
 
     // Update customers
     gameState.customers += Math.floor(servedCustomers * 0.1);
@@ -301,21 +302,13 @@ const handleAction = (actionType) => {
                 addLog('You took out a $10,000 loan with a $1,000 monthly payment.', 'event', 'text-green-600');
             } else { showMessage("Already have a loan", "You can only have one loan at a time."); }
             break;
-        case 'order_beans':
-            const beansCost = configs.supplyOrderSize * configs.supplyCosts.beans;
-            if (gameState.money >= beansCost) {
-                gameState.money -= beansCost;
-                gameState.inventory.beans += configs.supplyOrderSize;
-                addLog(`Ordered ${configs.supplyOrderSize} cups of coffee beans for $${beansCost.toFixed(2)}.`, 'daily', 'text-green-600');
-            } else { showMessage("Not Enough Money", "You don't have enough cash to order more coffee beans."); }
-            break;
-        case 'order_milk':
-            const milkCost = configs.supplyOrderSize * configs.supplyCosts.milk;
-            if (gameState.money >= milkCost) {
-                gameState.money -= milkCost;
-                gameState.inventory.milk += configs.supplyOrderSize;
-                addLog(`Ordered ${configs.supplyOrderSize} cups of milk for $${milkCost.toFixed(2)}.`, 'daily', 'text-green-600');
-            } else { showMessage("Not Enough Money", "You don't have enough cash to order more milk."); }
+        case 'order_supplies':
+            const suppliesCost = configs.supplyOrderSize * configs.supplyCosts.coffeeCup;
+            if (gameState.money >= suppliesCost) {
+                gameState.money -= suppliesCost;
+                gameState.inventory.coffeeCups += configs.supplyOrderSize;
+                addLog(`Ordered ${configs.supplyOrderSize} coffee supplies for $${suppliesCost.toFixed(2)}.`, 'daily', 'text-green-600');
+            } else { showMessage("Not Enough Money", "You don't have enough cash to order more coffee supplies."); }
             break;
         case 'show_prices':
             showPriceModal();
@@ -352,7 +345,7 @@ const handlePlanFinalization = () => {
             equipmentConfig: equipmentConfig,
             supplierConfig: configs.suppliers[plan.supplier],
         },
-        inventory: { beans: 500, milk: 500 },
+        inventory: { coffeeCups: 1000 },
         loan: null, weather: 'Sunny', equipmentHealth: 1.0,
     };
 
@@ -393,9 +386,9 @@ const renderPlanningPhase = () => {
                 </select>
                 <label class="block text-lg font-medium text-gray-700">Coffee Bean Supplier</label>
                 <select onchange="planningState.supplier = this.value" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
-                    <option value="budget" ${plan.supplier === 'budget' ? 'selected' : ''}>Budget Beans ($1.00/cup)</option>
-                    <option value="premium" ${plan.supplier === 'premium' ? 'selected' : ''}>Premium Beans ($2.00/cup)</option>
-                    <option value="gourmet" ${plan.supplier === 'gourmet' ? 'selected' : ''}>Gourmet Beans ($3.00/cup)</option>
+                    <option value="budget" ${plan.supplier === 'budget' ? 'selected' : ''}>Budget Beans ($1.00 per cup, low quality)</option>
+                    <option value="premium" ${plan.supplier === 'premium' ? 'selected' : ''}>Premium Beans ($2.00 per cup, good quality)</option>
+                    <option value="gourmet" ${plan.supplier === 'gourmet' ? 'selected' : ''}>Gourmet Beans ($3.00 per cup, high quality)</option>
                 </select>
                 <div class="flex gap-4">
                     <button onclick="planningState.step = 1; render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Previous</button>
@@ -464,11 +457,11 @@ const renderRunningPhase = () => {
     let isUpgradeAvailable = false;
     
     if (gameState.equipment === 'basic') {
-        nextUpgradeText = `Upgrade to Standard ($${configs.equipment.standard.cost - configs.equipment.basic.cost})`;
+        nextUpgradeText = `Upgrade to Standard ($${(configs.equipment.standard.cost - configs.equipment.basic.cost).toLocaleString()})`;
         nextUpgradeCost = configs.equipment.standard.cost - configs.equipment.basic.cost;
         isUpgradeAvailable = true;
     } else if (gameState.equipment === 'standard') {
-        nextUpgradeText = `Upgrade to Pro ($${configs.equipment.pro.cost - configs.equipment.standard.cost})`;
+        nextUpgradeText = `Upgrade to Pro ($${(configs.equipment.pro.cost - configs.equipment.standard.cost).toLocaleString()})`;
         nextUpgradeCost = configs.equipment.pro.cost - configs.equipment.standard.cost;
         isUpgradeAvailable = true;
     } else {
@@ -562,21 +555,13 @@ const renderRunningPhase = () => {
                 <div class="mt-6 pt-6 border-t border-gray-200">
                     <h3 class="text-xl font-bold text-gray-700 mb-2">Inventory</h3>
                     <div class="flex justify-between items-center mb-2"> 
-                        <span class="font-semibold text-gray-600">Coffee Beans:</span> 
+                        <span class="font-semibold text-gray-600">Coffee Supplies:</span> 
                         <div class="flex items-center gap-2">
-                            <span class="text-gray-800 font-medium">${gameState.inventory.beans} cups</span>
-                            <button onclick="handleAction('order_beans')" class="px-3 py-1 text-sm bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl transition duration-300">Order ${configs.supplyOrderSize}</button>
+                            <span class="text-gray-800 font-medium">${gameState.inventory.coffeeCups} cups</span>
+                            <button onclick="handleAction('order_supplies')" class="px-3 py-1 text-sm bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl transition duration-300">Order ${configs.supplyOrderSize}</button>
                         </div>
                     </div>
-                    <div class="flex justify-between items-center"> 
-                        <span class="font-semibold text-gray-600">Milk:</span> 
-                        <div class="flex items-center gap-2">
-                            <span class="text-gray-800 font-medium">${gameState.inventory.milk} cups</span>
-                            <button onclick="handleAction('order_milk')" class="px-3 py-1 text-sm bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl transition duration-300">Order ${configs.supplyOrderSize}</button>
-                        </div>
-                    </div>
-                    ${gameState.inventory.beans < 100 ? '<p class="text-red-500 mt-2 animate-pulse">Running low on beans!</p>' : ''}
-                    ${gameState.inventory.milk < 100 ? '<p class="text-red-500 mt-2 animate-pulse">Running low on milk!</p>' : ''}
+                    ${gameState.inventory.coffeeCups < 100 ? '<p class="text-red-500 mt-2 animate-pulse">Running low on coffee supplies!</p>' : ''}
                 </div>
                 <div class="mt-6 pt-6 border-t border-gray-200">
                     <button onclick="window.location.reload()" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-xl transition duration-300">Restart Game</button>
@@ -612,7 +597,7 @@ const init = () => {
         eventLog: [],
         isGameOver: false,
         businessPlan: {},
-        inventory: { beans: 500, milk: 500 },
+        inventory: { coffeeCups: 1000 },
         loan: null, weather: 'Sunny', equipmentHealth: 1.0,
     };
     
@@ -633,4 +618,3 @@ window.onload = init;
 </script>
 </body>
 </html>
-
