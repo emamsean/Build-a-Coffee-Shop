@@ -148,7 +148,7 @@ const setupFirestore = async () => {
                 userId = crypto.randomUUID(); // Use a random UUID if not authenticated
                 listenForHighScores();
             }
-            render();
+            window.render(); // Call global render
         });
 
     } catch (e) {
@@ -171,7 +171,7 @@ const listenForHighScores = () => {
         });
         highScores = scores.slice(0, 5); // Keep top 5 scores
         console.log("High scores updated:", highScores);
-        render(); // Re-render the UI to show the updated scores
+        window.render(); // Re-render the UI to show the updated scores
     }, (error) => {
         console.error("Error fetching high scores:", error);
     });
@@ -239,7 +239,7 @@ const showPriceModal = () => {
     const closeBtn = document.getElementById('price-close-btn');
     closeBtn.onclick = () => {
         priceModal.classList.add('hidden');
-        render();
+        window.render(); // Call global render
     };
 };
 
@@ -372,7 +372,7 @@ const gameLoop = () => {
         return;
     }
 
-    render();
+    window.render(); // Call global render
 };
 
 const handleAction = (actionType) => {
@@ -438,10 +438,11 @@ const handleAction = (actionType) => {
             showPriceModal();
             break;
     }
-    render();
+    window.render(); // Call global render
 };
 
-const handlePlanFinalization = () => {
+// Make handlePlanFinalization globally accessible
+window.handlePlanFinalization = () => {
     if (!window.planningState.playerName) {
         showMessage("Enter a Name", "Please enter your name to start the game.");
         return;
@@ -479,13 +480,39 @@ const handlePlanFinalization = () => {
     };
 
     gameInterval = setInterval(gameLoop, 1500); // Day = 1.5s
-    render();
+    window.render(); // Call global render
 };
 
-// --- Rendering functions ---
+// Make render function globally accessible
+window.render = () => {
+    if (gameState.isGameOver) {
+        renderGameOverPhase();
+    } else if (gameState.phase === 'planning') {
+        renderPlanningPhase();
+    } else if (gameState.phase === 'running') {
+        renderRunningPhase();
+    } else {
+        // Initialize planningState and set the initial phase if not already set
+        // Ensure planningState is initialized if the game is just starting
+        window.planningState = {
+            step: 0,
+            playerName: '',
+            shopName: 'My Coffee Shop',
+            location: 'suburbs',
+            equipment: 'basic',
+            supplier: 'budget',
+            baristaCount: 1,
+            marketingBudget: 0,
+        };
+        gameState.phase = 'planning'; // Set initial phase
+        renderPlanningPhase();
+    }
+};
+
+// --- Rendering functions (these can remain module-scoped as they are called by the global window.render) ---
 const renderPlanningPhase = () => {
     let content = '';
-    const plan = window.planningState;
+    const plan = window.planningState; // Access global planningState
 
     // Step 0: Player Name
     if (plan.step === 0) {
@@ -493,7 +520,7 @@ const renderPlanningPhase = () => {
             <div class="space-y-6">
                 <label class="block text-lg font-medium text-gray-700">Your Name</label>
                 <input type="text" value="${plan.playerName}" oninput="window.planningState.playerName = this.value" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2" placeholder="e.g., Alex">
-                <button onclick="window.planningState.step = 1; render()" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Next</button>
+                <button onclick="window.planningState.step = 1; window.render()" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Next</button>
             </div>
         `;
     }
@@ -510,8 +537,8 @@ const renderPlanningPhase = () => {
                     <option value="college" ${plan.location === 'college' ? 'selected' : ''}>$10,000 Rent/Month (High Student Traffic)</option>
                 </select>
                 <div class="flex gap-4">
-                    <button onclick="window.planningState.step = 0; render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Previous</button>
-                    <button onclick="window.planningState.step = 2; render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Next</button>
+                    <button onclick="window.planningState.step = 0; window.render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Previous</button>
+                    <button onclick="window.planningState.step = 2; window.render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Next</button>
                 </div>
             </div>
         `;
@@ -533,8 +560,8 @@ const renderPlanningPhase = () => {
                     <option value="gourmet" ${plan.supplier === 'gourmet' ? 'selected' : ''}>Gourmet Beans ($3.00 per cup, high quality)</option>
                 </select>
                 <div class="flex gap-4">
-                    <button onclick="window.planningState.step = 1; render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Previous</button>
-                    <button onclick="window.planningState.step = 3; render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Next</button>
+                    <button onclick="window.planningState.step = 1; window.render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Previous</button>
+                    <button onclick="window.planningState.step = 3; window.render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Next</button>
                 </div>
             </div>
         `;
@@ -550,8 +577,8 @@ const renderPlanningPhase = () => {
                 <input type="number" min="0" max="10000" step="500" value="${plan.marketingBudget}" oninput="window.planningState.marketingBudget = parseInt(this.value)" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
                 <p class="text-sm text-gray-500">One-time spend to get the word out on opening day.</p>
                 <div class="flex gap-4">
-                    <button onclick="window.planningState.step = 2; render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Previous</button>
-                    <button onclick="window.planningState.step = 4; render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Next</button>
+                    <button onclick="window.planningState.step = 2; window.render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Previous</button>
+                    <button onclick="window.planningState.step = 4; window.render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Next</button>
                 </div>
             </div>
         `;
@@ -575,8 +602,8 @@ const renderPlanningPhase = () => {
                     <p class="font-bold"><span>Starting Cash:</span> $${startingCash.toLocaleString()}</p>
                 </div>
                 <div class="flex gap-4">
-                    <button onclick="window.planningState.step = 3; render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Previous</button>
-                    <button onclick="handlePlanFinalization()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Open for Business!</button>
+                    <button onclick="window.planningState.step = 3; window.render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Previous</button>
+                    <button onclick="window.handlePlanFinalization()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Open for Business!</button>
                 </div>
             </div>
         `;
@@ -673,7 +700,7 @@ const renderRunningPhase = () => {
                         <button onclick="handleAction('take_loan')" ${gameState.loan ? 'disabled' : ''} class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-xl transition duration-300 ${gameState.loan ? 'opacity-50 cursor-not-allowed' : ''}">
                             Take Loan ($10,000)
                         </button>
-                        <button onclick="handleAction('show_prices')" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-xl transition duration-300">
+                        <button onclick="showPriceModal()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-xl transition duration-300">
                             Adjust Prices
                         </button>
                     </div>
@@ -708,35 +735,10 @@ const renderGameOverPhase = () => {
     `;
 };
 
-const render = () => {
-    if (gameState.isGameOver) {
-        renderGameOverPhase();
-    } else if (gameState.phase === 'planning') {
-        renderPlanningPhase();
-    } else if (gameState.phase === 'running') {
-        renderRunningPhase();
-    } else {
-        // Initialize planningState and set the initial phase if not already set
-        // Ensure planningState is initialized if the game is just starting
-        window.planningState = {
-            step: 0,
-            playerName: '',
-            shopName: 'My Coffee Shop',
-            location: 'suburbs',
-            equipment: 'basic',
-            supplier: 'budget',
-            baristaCount: 1,
-            marketingBudget: 0,
-        };
-        gameState.phase = 'planning'; // Set initial phase
-        renderPlanningPhase();
-    }
-};
-
 // --- Initialize the Game ---
 document.addEventListener('DOMContentLoaded', () => {
     setupFirestore(); // Setup Firebase first
-    render(); // Initial render based on the game state
+    window.render(); // Initial render using the global render function
 });
 </script>
 </body>
