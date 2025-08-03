@@ -21,6 +21,27 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Firebase SDK Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, addDoc, setDoc, onSnapshot, collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        window.firebase = {
+            initializeApp,
+            getAuth,
+            signInAnonymously,
+            signInWithCustomToken,
+            onAuthStateChanged,
+            getFirestore,
+            doc,
+            addDoc,
+            onSnapshot,
+            collection,
+            query,
+            orderBy
+        };
+    </script>
 </head>
 <body class="bg-gray-100 font-inter">
 
@@ -34,6 +55,7 @@
         <div class="bg-white border border-gray-300 rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
             <h3 id="message-title" class="text-2xl font-bold text-gray-900 mb-4"></h3>
             <p id="message-text" class="text-gray-700 mb-6"></p>
+            <div id="high-score-list" class="my-4 text-left"></div>
             <div class="flex justify-center">
                 <button id="message-close-btn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">OK</button>
             </div>
@@ -59,13 +81,22 @@
     </div>
 </div>
 
-<script>
+<script type="module">
 "use strict";
 
 // --- Global state and configurations ---
 let gameState = {};
 let planningState = {};
 let gameInterval = null;
+let highScores = [];
+
+// Firebase setup
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+let db = null;
+let auth = null;
+let userId = null;
 
 // Data configurations, simplified to one menu item
 const configs = {
@@ -94,10 +125,99 @@ const configs = {
 
 const weatherConditions = ['Sunny', 'Rainy', 'Cloudy'];
 
+// --- High Score Functions using Firestore ---
+const setupFirestore = async () => {
+    try {
+        const { initializeApp, getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, getFirestore, collection, onSnapshot, query, orderBy } = window.firebase;
+        const app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+
+        // Sign in the user
+        if (initialAuthToken) {
+            await signInWithCustomToken(auth, initialAuthToken);
+        } else {
+            await signInAnonymously(auth);
+        }
+
+        // Listen for auth state changes and set the user ID
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                userId = user.uid;
+                console.log("Authenticated with user ID:", userId);
+                // Start listening for high scores once authenticated
+                listenForHighScores();
+            } else {
+                console.log("No user is signed in.");
+                userId = crypto.randomUUID(); // Use a random UUID if not authenticated
+                listenForHighScores();
+            }
+            render();
+        });
+
+    } catch (e) {
+        console.error("Error setting up Firebase:", e);
+    }
+};
+
+const listenForHighScores = () => {
+    if (!db) {
+        console.error("Firestore is not initialized.");
+        return;
+    }
+    const highScoresRef = collection(db, `/artifacts/${appId}/public/data/highScores`);
+    const q = query(highScoresRef, orderBy('days'), orderBy('playerName'));
+
+    onSnapshot(q, (snapshot) => {
+        const scores = [];
+        snapshot.forEach((doc) => {
+            scores.push({ ...doc.data(), id: doc.id });
+        });
+        highScores = scores.slice(0, 5); // Keep top 5 scores
+        console.log("High scores updated:", highScores);
+        render(); // Re-render the UI to show the updated scores
+    }, (error) => {
+        console.error("Error fetching high scores:", error);
+    });
+};
+
+const saveHighScoreToFirestore = async (playerName, days) => {
+    if (!db) {
+        console.error("Firestore is not initialized.");
+        return;
+    }
+    const highScoresRef = collection(db, `/artifacts/${appId}/public/data/highScores`);
+    try {
+        await addDoc(highScoresRef, {
+            playerName,
+            days,
+            timestamp: new Date()
+        });
+        console.log("High score saved successfully!");
+    } catch (e) {
+        console.error("Error saving high score:", e);
+    }
+};
+
 // --- Helper Functions for UI ---
 const showMessage = (title, message, onClose = () => {}) => {
     document.getElementById('message-title').innerText = title;
     document.getElementById('message-text').innerText = message;
+    
+    const highScoreListDiv = document.getElementById('high-score-list');
+    highScoreListDiv.innerHTML = ''; // Clear previous scores
+    
+    if (highScores && highScores.length > 0) {
+        let scoresHTML = '<h4 class="text-xl font-bold mb-2">High Scores</h4><ol class="list-decimal list-inside space-y-1">';
+        highScores.forEach((score, index) => {
+            scoresHTML += `<li class="flex justify-between items-center bg-gray-100 p-2 rounded-md"><span class="font-medium">${score.playerName}</span><span class="text-sm text-gray-600">${score.days} days</span></li>`;
+        });
+        scoresHTML += '</ol>';
+        highScoreListDiv.innerHTML = scoresHTML;
+    } else {
+        highScoreListDiv.innerHTML = '<p class="text-gray-500">No high scores yet. Be the first!</p>';
+    }
+
     document.getElementById('message-box').classList.remove('hidden');
     const closeBtn = document.getElementById('message-close-btn');
     closeBtn.onclick = () => {
@@ -143,6 +263,12 @@ const endGame = (message) => {
     clearInterval(gameInterval);
     gameState.isGameOver = true;
     gameState.phase = 'gameover';
+    
+    // Check if the player won to save the score
+    if (gameState.customers >= 100000) {
+        saveHighScoreToFirestore(gameState.playerName, gameState.day);
+    }
+
     showMessage("Game Over", message, () => window.location.reload());
 };
 
@@ -246,7 +372,7 @@ const gameLoop = () => {
         endGame(`You ran out of money on day ${gameState.day}! Your coffee shop has closed.`);
         return;
     } else if (gameState.customers >= 100000) {
-        endGame(`Congratulations! You reached 100,000 customers in ${gameState.day} days and built a coffee empire! You win!`);
+        endGame(`Congratulations, ${gameState.playerName}! You reached 100,000 customers in ${gameState.day} days and built a coffee empire! You win!`);
         return;
     }
 
@@ -320,6 +446,10 @@ const handleAction = (actionType) => {
 };
 
 const handlePlanFinalization = () => {
+    if (!planningState.playerName) {
+        showMessage("Enter a Name", "Please enter your name to start the game.");
+        return;
+    }
     const plan = planningState;
     const equipmentConfig = configs.equipment[plan.equipment];
     const upfrontCost = equipmentConfig.cost + plan.baristaCount * 2500 + plan.marketingBudget;
@@ -336,6 +466,7 @@ const handlePlanFinalization = () => {
 
     gameState = {
         phase: 'running',
+        playerName: planningState.playerName,
         money: 50000 - upfrontCost,
         initialCapital: 50000,
         day: 0, month: 0, customers: 0, reputation: 0.5, baristas: newBaristas,
@@ -360,8 +491,18 @@ const renderPlanningPhase = () => {
     let content = '';
     const plan = planningState;
 
-    // Step 1
-    if (plan.step === 1) {
+    // Step 0: Player Name
+    if (plan.step === 0) {
+        content = `
+            <div class="space-y-6">
+                <label class="block text-lg font-medium text-gray-700">Your Name</label>
+                <input type="text" value="${plan.playerName}" oninput="planningState.playerName = this.value" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2" placeholder="e.g., Alex">
+                <button onclick="planningState.step = 1; render()" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Next</button>
+            </div>
+        `;
+    }
+    // Step 1: Shop Name & Location
+    else if (plan.step === 1) {
         content = `
             <div class="space-y-6">
                 <label class="block text-lg font-medium text-gray-700">Shop Name</label>
@@ -372,11 +513,14 @@ const renderPlanningPhase = () => {
                     <option value="suburbs" ${plan.location === 'suburbs' ? 'selected' : ''}>$5,000 Rent/Month (Moderate Traffic)</option>
                     <option value="college" ${plan.location === 'college' ? 'selected' : ''}>$10,000 Rent/Month (High Student Traffic)</option>
                 </select>
-                <button onclick="planningState.step = 2; render()" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Next</button>
+                <div class="flex gap-4">
+                    <button onclick="planningState.step = 0; render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Previous</button>
+                    <button onclick="planningState.step = 2; render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Next</button>
+                </div>
             </div>
         `;
     } 
-    // Step 2
+    // Step 2: Equipment & Supplier
     else if (plan.step === 2) {
         content = `
             <div class="space-y-6">
@@ -399,7 +543,7 @@ const renderPlanningPhase = () => {
             </div>
         `;
     } 
-    // Step 3
+    // Step 3: Baristas & Marketing
     else if (plan.step === 3) {
         content = `
             <div class="space-y-6">
@@ -416,7 +560,7 @@ const renderPlanningPhase = () => {
             </div>
         `;
     } 
-    // Step 4
+    // Step 4: Finalize
     else if (plan.step === 4) {
         const upfrontCost = configs.equipment[plan.equipment].cost + plan.baristaCount * 2500 + plan.marketingBudget;
         const startingCash = 50000 - upfrontCost;
@@ -424,6 +568,7 @@ const renderPlanningPhase = () => {
             <div class="space-y-6">
                 <h3 class="text-xl font-bold text-gray-700 text-center">Finalize Your Plan</h3>
                 <div class="bg-gray-50 rounded-xl p-6 shadow-inner space-y-3">
+                    <p><span>Player Name:</span> ${plan.playerName}</p>
                     <p><span>Shop Name:</span> ${plan.shopName}</p>
                     <p><span>Location:</span> ${configs.locations[plan.location].name}</p>
                     <p><span>Equipment:</span> ${configs.equipment[plan.equipment].name}</p>
@@ -445,7 +590,7 @@ const renderPlanningPhase = () => {
         <div class="flex flex-col gap-6">
             <h2 class="text-2xl font-semibold text-gray-700 text-center mb-4">Phase 1: Build Your Business Plan</h2>
             <div class="flex justify-center items-center gap-2 mb-6">
-                ${[1, 2, 3, 4].map(step => `<div class="w-4 h-4 rounded-full step-indicator ${planningState.step === step ? 'bg-indigo-500' : planningState.step > step ? 'bg-green-500' : 'bg-gray-300'}"></div>`).join('')}
+                ${[0, 1, 2, 3, 4].map(step => `<div class="w-4 h-4 rounded-full step-indicator ${planningState.step === step ? 'bg-indigo-500' : planningState.step > step ? 'bg-green-500' : 'bg-gray-300'}"></div>`).join('')}
             </div>
             ${content}
         </div>
@@ -552,6 +697,7 @@ const renderRunningPhase = () => {
             <div class="lg:w-1/3 flex flex-col gap-4 bg-gray-50 rounded-2xl p-6 shadow-lg">
                 <h2 class="text-2xl font-bold text-gray-700 mb-4">Shop Details</h2>
                 <div class="space-y-4">
+                    <div class="flex justify-between items-center"><span class="font-semibold text-gray-600">User ID:</span><span class="text-gray-800 font-medium">${userId}</span></div>
                     <div class="flex justify-between items-center"><span class="font-semibold text-gray-600">Name:</span><span class="text-gray-800 font-medium">${gameState.businessPlan.shopName}</span></div>
                     <div class="flex justify-between items-center"><span class="font-semibold text-gray-600">Monthly Rent:</span><span class="text-gray-800 font-medium">$${gameState.rent.toLocaleString()}</span></div>
                     ${gameState.loan ? `<div class="flex justify-between items-center"><span class="font-semibold text-gray-600">Loan Payment:</span><span class="text-gray-800 font-medium">$${gameState.loan.payment.toLocaleString()}/mo</span></div>` : ''}
@@ -576,15 +722,17 @@ const renderRunningPhase = () => {
 const render = () => {
     if (gameState.phase === 'planning') {
         renderPlanningPhase();
-    } else {
+    } else if (gameState.phase === 'running') {
         renderRunningPhase();
     }
+    // No specific render for 'gameover' phase, as it uses the modal which is a separate DOM element
 };
 
-const init = () => {
+const init = async () => {
     // Initial state setup
     gameState = {
         phase: 'planning',
+        playerName: '',
         money: 50000,
         initialCapital: 50000,
         day: 0,
@@ -604,7 +752,8 @@ const init = () => {
     };
     
     planningState = {
-        step: 1,
+        step: 0,
+        playerName: '',
         shopName: 'The Daily Grind',
         location: 'downtown',
         equipment: 'basic',
@@ -613,6 +762,7 @@ const init = () => {
         marketingBudget: 1000,
     };
 
+    await setupFirestore();
     render();
 };
 
