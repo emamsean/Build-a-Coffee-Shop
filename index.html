@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    </head>
+</head>
 <body class="bg-gray-100 font-inter">
 
 <div id="root" class="bg-gray-100 flex flex-col items-center justify-start min-h-screen p-4">
@@ -59,13 +59,14 @@
 <script type="module">
 "use strict";
 
-// --- Firebase SDK Imports (UPDATED to v12.0.0) ---
+// --- Firebase SDK Imports (UPDATED to v12.0.0 and including Auth, Firestore) ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
+// Added Auth and Firestore imports
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, addDoc, setDoc, onSnapshot, collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
-// --- Your web app's Firebase configuration (PASTED FROM YOUR PROVIDED SCRIPT INFO) ---
+// --- Your web app's Firebase configuration ---
 const firebaseConfig = {
     apiKey: "AIzaSyDo1GxUHgC0ws5__fcykyXOIx99QleK6PE",
     authDomain: "build-a-coffee-shop.firebaseapp.com",
@@ -76,17 +77,17 @@ const firebaseConfig = {
     measurementId: "G-KHV9W49XN5"
 };
 
-const appId = firebaseConfig.appId; // Use the appId from your firebaseConfig
-const initialAuthToken = null; // Keep this null unless you have a specific custom auth token
+const appId = firebaseConfig.appId;
+const initialAuthToken = null;
 
 // --- Global state and configurations ---
 let gameState = {};
-window.planningState = {}; // Still making this global for easy access in render functions
+window.planningState = {};
 let gameInterval = null;
 let highScores = [];
-let db = null;
-let auth = null;
-let analytics = null; // Declare analytics variable
+let db = null; 
+let auth = null; 
+let analytics = null;
 let userId = null;
 
 // Data configurations, simplified to one menu item
@@ -110,8 +111,8 @@ const configs = {
         { id: 'coffee', name: 'Coffee', baseCost: 1.5, basePrice: 3, qualityFactor: 1.0 },
     ],
     baristaSkills: ['Speed', 'Quality', 'Charm'],
-    supplyCosts: { coffeeCup: 1.0 }, // Combined cost for beans, milk, and cup
-    supplyOrderSize: 10000, // Fixed amount to order
+    supplyCosts: { coffeeCup: 1.0 },
+    supplyOrderSize: 10000,
 };
 
 const weatherConditions = ['Sunny', 'Rainy', 'Cloudy'];
@@ -120,9 +121,9 @@ const weatherConditions = ['Sunny', 'Rainy', 'Cloudy'];
 const setupFirestore = async () => {
     try {
         const app = initializeApp(firebaseConfig);
-        auth = getAuth(app);
-        db = getFirestore(app);
-        analytics = getAnalytics(app); // Initialize analytics here
+        auth = getAuth(app);       // Initialize Firebase Authentication
+        db = getFirestore(app);     // Initialize Firestore
+        analytics = getAnalytics(app); 
 
         // Sign in the user
         if (initialAuthToken) {
@@ -140,7 +141,7 @@ const setupFirestore = async () => {
                 listenForHighScores();
             } else {
                 console.log("No user is signed in.");
-                userId = crypto.randomUUID(); // Use a random UUID if not authenticated
+                userId = crypto.randomUUID(); 
                 listenForHighScores();
             }
             render(); // Call render after auth state is known
@@ -164,9 +165,9 @@ const listenForHighScores = () => {
         snapshot.forEach((doc) => {
             scores.push({ ...doc.data(), id: doc.id });
         });
-        highScores = scores.slice(0, 5); // Keep top 5 scores
+        highScores = scores.slice(0, 5); 
         console.log("High scores updated:", highScores);
-        render(); // Re-render the UI to show the updated scores
+        render(); 
     }, (error) => {
         console.error("Error fetching high scores:", error);
     });
@@ -196,7 +197,7 @@ const showMessage = (title, message, onClose = () => {}) => {
     document.getElementById('message-text').innerText = message;
     
     const highScoreListDiv = document.getElementById('high-score-list');
-    highScoreListDiv.innerHTML = ''; // Clear previous scores
+    highScoreListDiv.innerHTML = ''; 
     
     if (highScores && highScores.length > 0) {
         let scoresHTML = '<h4 class="text-xl font-bold mb-2">High Scores</h4><ol class="list-decimal list-inside space-y-1">';
@@ -228,7 +229,6 @@ const showPriceModal = () => {
     const priceInput = document.getElementById('price-input');
     priceInput.value = gameState.menuPrices.coffee;
 
-    // Remove previous event listener before adding a new one to prevent duplicates
     if (priceInput._eventListenerAdded) {
         priceInput.removeEventListener('change', priceInput._eventListenerAdded);
     }
@@ -240,7 +240,7 @@ const showPriceModal = () => {
         }
     };
     priceInput.addEventListener('change', priceChangeListener);
-    priceInput._eventListenerAdded = priceChangeListener; // Store reference to remove later
+    priceInput._eventListenerAdded = priceChangeListener; 
     
     const closeBtn = document.getElementById('price-close-btn');
     if (closeBtn._eventListenerAdded) {
@@ -281,7 +281,7 @@ const endGame = (message) => {
 
 const handleRandomEvent = () => {
   const eventChance = Math.random();
-  if (eventChance < 0.1) { // 10% chance per day
+  if (eventChance < 0.1) { 
     const events = [
       { type: 'positive', message: 'A local food blogger gave you a great review! Reputation boosted!', action: () => {
         gameState.reputation = Math.min(1.0, gameState.reputation + 0.05);
@@ -352,7 +352,7 @@ const gameLoop = () => {
     const cupsToSell = Math.min(customersToday, gameState.inventory.coffeeCups);
     
     if (cupsToSell > 0) {
-        servedCustomers = cupsToSell;
+        servedCustomers = cupsToSell; // Corrected typo: cupsToell -> cupsToSell
         revenue = (servedCustomers * gameState.menuPrices.coffee);
         totalIngredientCosts = (servedCustomers * costPerCup); 
     }
@@ -383,7 +383,7 @@ const gameLoop = () => {
         return;
     }
 
-    render(); // Call global render
+    render(); 
 };
 
 const handleAction = (actionType) => {
@@ -425,7 +425,6 @@ const handleAction = (actionType) => {
             if (gameState.money >= upgradeCost) {
                 gameState.money -= upgradeCost;
                 gameState.equipment = newEquipment;
-                // NEW LOGIC: Restore equipment health to 100% after upgrade
                 gameState.equipmentHealth = 1.0;
                 addLog(`You upgraded your equipment to ${configs.equipment[newEquipment].name}! It's brand new and working perfectly.`, 'event', 'text-yellow-600');
             } else { showMessage("Not Enough Money", `You can't afford the ${configs.equipment[newEquipment].name} upgrade.`); }
@@ -449,7 +448,7 @@ const handleAction = (actionType) => {
             showPriceModal();
             break;
     }
-    render(); // Call global render
+    render(); 
 };
 
 const handlePlanFinalization = () => {
@@ -489,8 +488,8 @@ const handlePlanFinalization = () => {
         loan: null, weather: 'Sunny', equipmentHealth: 1.0,
     };
 
-    gameInterval = setInterval(gameLoop, 1500); // Day = 1.5s
-    render(); // Call global render
+    gameInterval = setInterval(gameLoop, 1500); 
+    render(); 
 };
 
 // --- Rendering functions ---
