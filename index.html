@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Coffee Shop Simulator</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -17,11 +16,9 @@
         }
       }
     </script>
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- Firebase SDK Imports -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -50,7 +47,6 @@
         <h1 class="text-4xl font-bold text-center text-gray-800 mb-6">Coffee Shop Simulator</h1>
         <div id="game-content"></div>
     </div>
-    <!-- Modal for messages -->
     <div id="message-box" class="fixed inset-0 bg-gray-500/50 flex items-center justify-center p-4 z-50 hidden">
         <div class="bg-white border border-gray-300 rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
             <h3 id="message-title" class="text-2xl font-bold text-gray-900 mb-4"></h3>
@@ -61,7 +57,6 @@
             </div>
         </div>
     </div>
-    <!-- Modal for prices -->
     <div id="price-modal" class="fixed inset-0 bg-gray-500/50 flex items-center justify-center p-4 z-50 hidden">
         <div class="bg-white border border-gray-300 rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
             <div class="space-y-2">
@@ -235,8 +230,8 @@ const showPriceModal = () => {
     priceInput.onchange = (e) => {
         const newPrice = parseInt(e.target.value) || 0;
         if (newPrice > 0) {
-             gameState.menuPrices.coffee = newPrice;
-             addLog(`You adjusted the price of coffee to $${newPrice}.`, 'daily', 'text-teal-600');
+              gameState.menuPrices.coffee = newPrice;
+              addLog(`You adjusted the price of coffee to $${newPrice}.`, 'daily', 'text-teal-600');
         }
     };
     
@@ -624,7 +619,6 @@ const renderRunningPhase = () => {
     document.getElementById('game-content').innerHTML = `
         <div class="flex flex-col lg:flex-row gap-8">
             <div class="lg:w-2/3 flex flex-col gap-4">
-                <!-- Status Cards -->
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div class="bg-green-100 text-green-800 p-4 rounded-xl shadow-md text-center"> 
                         <div class="font-bold text-lg">Cash</div> 
@@ -635,138 +629,113 @@ const renderRunningPhase = () => {
                             <div class="font-bold text-lg">Customers</div>
                             <div class="text-2xl font-semibold">${gameState.customers.toLocaleString()}</div>
                         </div>
-                        <button onclick="handleAction('market')" ${gameState.money < 1000 ? 'disabled' : ''} class="mt-2 px-3 py-1 text-sm bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl transition duration-300 ${gameState.money < 1000 ? 'bg-gray-400 cursor-not-allowed' : ''}">Run Ad Campaign</button>
+                        <button onclick="handleAction('market')" ${gameState.money < 1000 ? 'disabled' : ''} class="mt-2 px-3 py-1 text-sm bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl transition duration-300 ${gameState.money < 1000 ? 'opacity-50 cursor-not-allowed' : ''}">
+                            Marketing ($1,000)
+                        </button>
                     </div>
-                    <div class="bg-purple-100 text-purple-800 p-4 rounded-xl shadow-md text-center"> 
-                        <div class="font-bold text-lg">Reputation</div> 
-                        <div class="text-2xl font-semibold">${(gameState.reputation * 100).toFixed(0)}%</div>
-                    </div>
-                    <div class="bg-orange-100 text-orange-800 p-4 rounded-xl shadow-md text-center flex flex-col justify-between"> 
-                        <div>
-                            <div class="font-bold text-lg">Inventory</div> 
-                            <div class="text-xl font-semibold">${gameState.inventory.coffeeCups} cups</div>
-                        </div>
-                        <button onclick="handleAction('order_supplies')" class="mt-2 px-3 py-1 text-sm bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl transition duration-300">Order ${configs.supplyOrderSize}</button>
-                    </div>
-                </div>
-                <!-- Action Buttons -->
-                <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                    <div class="bg-gray-100 text-gray-800 p-4 rounded-xl shadow-md text-center flex flex-col justify-between"> 
-                        <div>
-                            <div class="font-bold text-lg">Baristas</div>
-                            <div class="text-2xl font-semibold">${gameState.baristas.length}</div>
-                        </div>
-                        <button onclick="handleAction('hire')" ${gameState.money < 2500 ? 'disabled' : ''} class="mt-2 px-3 py-1 text-sm bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl transition duration-300 ${gameState.money < 2500 ? 'bg-gray-400 cursor-not-allowed' : ''}">Hire Barista</button>
-                    </div>
-                    <div class="bg-gray-100 text-gray-800 p-4 rounded-xl shadow-md text-center flex flex-col justify-between"> 
-                        <div>
-                            <div class="font-bold text-lg">Equipment Health</div>
-                            <div class="text-2xl font-semibold">${(gameState.equipmentHealth * 100).toFixed(0)}%</div>
-                        </div>
-                        <button onclick="handleAction('upgrade')" ${!isUpgradeAvailable || gameState.money < nextUpgradeCost ? 'disabled' : ''} class="mt-2 px-3 py-1 text-sm bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl transition duration-300 ${!isUpgradeAvailable || gameState.money < nextUpgradeCost ? 'bg-gray-400 cursor-not-allowed' : ''}">${nextUpgradeText}</button>
-                    </div>
-                    <div class="bg-gray-100 text-gray-800 p-4 rounded-xl shadow-md text-center"> 
+                    <div class="bg-yellow-100 text-yellow-800 p-4 rounded-xl shadow-md text-center"> 
                         <div class="font-bold text-lg">Day</div> 
                         <div class="text-2xl font-semibold">${gameState.day}</div>
                     </div>
-                </div>
-                <div class="bg-white p-6 rounded-2xl shadow-lg">
-                    <h3 class="text-xl font-bold text-gray-700 mb-4">Actions</h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <button onclick="handleAction('show_prices')" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Adjust Prices</button>
-                        <button onclick="handleAction('take_loan')" ${!!gameState.loan ? 'disabled' : ''} class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 ${!!gameState.loan ? 'bg-gray-400 cursor-not-allowed' : ''}">Take Loan ($10,000)</button>
+                    <div class="bg-purple-100 text-purple-800 p-4 rounded-xl shadow-md text-center"> 
+                        <div class="font-bold text-lg">Reputation</div> 
+                        <div class="text-2xl font-semibold">${(gameState.reputation * 100).toFixed(1)}%</div>
                     </div>
                 </div>
-                <!-- Logs -->
-                <div class="flex flex-col md:flex-row gap-4 flex-grow">
-                    <div class="md:w-1/2 bg-gray-50 rounded-xl p-4 shadow-inner overflow-y-auto h-48">
-                        <h2 class="text-xl font-bold text-gray-700 mb-2">Daily Log</h2>
-                        <div class="text-sm text-gray-600 space-y-1">
-                            ${dailyLogHTML}
-                        </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-md flex-grow">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-4">${gameState.businessPlan.shopName} Status</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+                        <p><strong>Location:</strong> ${configs.locations[gameState.businessPlan.location].name}</p>
+                        <p><strong>Equipment:</strong> ${configs.equipment[gameState.equipment].name} (${(gameState.equipmentHealth * 100).toFixed(0)}% Health)</p>
+                        <p><strong>Baristas:</strong> ${gameState.baristas.length}</p>
+                        <p><strong>Coffee Price:</strong> $${gameState.menuPrices.coffee.toFixed(2)}</p>
+                        <p><strong>Inventory:</strong> ${gameState.inventory.coffeeCups} cups</p>
+                        <p><strong>Weather:</strong> ${gameState.weather}</p>
+                        <p><strong>Monthly Rent:</strong> $${gameState.rent.toLocaleString()}</p>
+                        ${gameState.loan ? `<p><strong>Loan Payment:</strong> $${gameState.loan.payment.toLocaleString()} / month</p>` : ''}
                     </div>
-                    <div class="md:w-1/2 bg-gray-50 rounded-xl p-4 shadow-inner overflow-y-auto h-48">
-                        <h2 class="text-xl font-bold text-gray-700 mb-2">Special Events</h2>
-                        <div class="text-sm text-gray-600 space-y-1">
-                            ${eventLogHTML}
-                        </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-4">Actions</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <button onclick="handleAction('hire')" ${gameState.money < 2500 ? 'disabled' : ''} class="bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 px-4 rounded-xl transition duration-300 ${gameState.money < 2500 ? 'opacity-50 cursor-not-allowed' : ''}">
+                            Hire Barista ($2,500)
+                        </button>
+                        <button onclick="handleAction('upgrade')" ${!isUpgradeAvailable || gameState.money < nextUpgradeCost ? 'disabled' : ''} class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-xl transition duration-300 ${!isUpgradeAvailable || gameState.money < nextUpgradeCost ? 'opacity-50 cursor-not-allowed' : ''}">
+                            ${nextUpgradeText}
+                        </button>
+                        <button onclick="handleAction('order_supplies')" ${gameState.money < (configs.supplyOrderSize * configs.supplyCosts.coffeeCup) ? 'disabled' : ''} class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-4 rounded-xl transition duration-300 ${gameState.money < (configs.supplyOrderSize * configs.supplyCosts.coffeeCup) ? 'opacity-50 cursor-not-allowed' : ''}">
+                            Order Supplies ($${(configs.supplyOrderSize * configs.supplyCosts.coffeeCup).toFixed(2)})
+                        </button>
+                        <button onclick="handleAction('take_loan')" ${gameState.loan ? 'disabled' : ''} class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-xl transition duration-300 ${gameState.loan ? 'opacity-50 cursor-not-allowed' : ''}">
+                            Take Loan ($10,000)
+                        </button>
+                        <button onclick="handleAction('show_prices')" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-xl transition duration-300">
+                            Adjust Prices
+                        </button>
                     </div>
                 </div>
             </div>
-            <!-- Shop Details & Inventory -->
-            <div class="lg:w-1/3 flex flex-col gap-4 bg-gray-50 rounded-2xl p-6 shadow-lg">
-                <h2 class="text-2xl font-bold text-gray-700 mb-4">Shop Details</h2>
-                <div class="space-y-4">
-                    <div class="flex justify-between items-center"><span class="font-semibold text-gray-600">User ID:</span><span class="text-gray-800 font-medium">${userId}</span></div>
-                    <div class="flex justify-between items-center"><span class="font-semibold text-gray-600">Name:</span><span class="text-gray-800 font-medium">${gameState.businessPlan.shopName}</span></div>
-                    <div class="flex justify-between items-center"><span class="font-semibold text-gray-600">Monthly Rent:</span><span class="text-gray-800 font-medium">$${gameState.rent.toLocaleString()}</span></div>
-                    ${gameState.loan ? `<div class="flex justify-between items-center"><span class="font-semibold text-gray-600">Loan Payment:</span><span class="text-gray-800 font-medium">$${gameState.loan.payment.toLocaleString()}/mo</span></div>` : ''}
-                    <div class="flex justify-between items-center"><span class="font-semibold text-gray-600">Equipment:</span><span class="text-gray-800 font-medium">${configs.equipment[gameState.equipment].name}</span></div>
-                </div>
-                <div class="mt-6 pt-6 border-t border-gray-200">
-                    <h3 class="text-xl font-bold text-gray-700 mb-2">Daily Weather</h3>
-                    <div class="flex justify-between items-center">
-                        <span class="font-semibold text-gray-600">Weather:</span>
-                        <span class="text-gray-800 font-medium">${gameState.weather}</span>
+
+            <div class="lg:w-1/3 flex flex-col gap-4">
+                <div class="bg-white p-6 rounded-xl shadow-md flex-grow">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-4">Daily Log</h3>
+                    <div class="space-y-2 text-sm max-h-60 overflow-y-auto">
+                        ${dailyLogHTML || '<div class="text-gray-500">No daily events yet.</div>'}
                     </div>
                 </div>
-                ${gameState.inventory.coffeeCups < 100 ? '<p class="text-red-500 mt-2 animate-pulse">Running low on coffee supplies!</p>' : ''}
-                <div class="mt-6 pt-6 border-t border-gray-200">
-                    <button onclick="window.location.reload()" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-xl transition duration-300">Restart Game</button>
+
+                <div class="bg-white p-6 rounded-xl shadow-md flex-grow">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-4">Special Events</h3>
+                    <div class="space-y-2 text-sm max-h-60 overflow-y-auto">
+                        ${eventLogHTML}
+                    </div>
                 </div>
             </div>
         </div>
     `;
 };
 
+const renderGameOverPhase = () => {
+    document.getElementById('game-content').innerHTML = `
+        <div class="text-center space-y-6">
+            <h2 class="text-3xl font-bold text-gray-800">Game Over!</h2>
+            <button onclick="window.location.reload()" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Play Again</button>
+        </div>
+    `;
+};
+
 const render = () => {
-    if (gameState.phase === 'planning') {
+    if (gameState.isGameOver) {
+        renderGameOverPhase();
+    } else if (gameState.phase === 'planning') {
         renderPlanningPhase();
     } else if (gameState.phase === 'running') {
         renderRunningPhase();
+    } else {
+        // Initial state, render planning phase if no phase is set
+        planningState = {
+            step: 0,
+            playerName: '',
+            shopName: 'My Coffee Shop',
+            location: 'suburbs',
+            equipment: 'basic',
+            supplier: 'budget',
+            baristaCount: 1,
+            marketingBudget: 0,
+        };
+        gameState.phase = 'planning'; // Set initial phase
+        renderPlanningPhase();
     }
-    // No specific render for 'gameover' phase, as it uses the modal which is a separate DOM element
 };
 
-const init = async () => {
-    // Initial state setup
-    gameState = {
-        phase: 'planning',
-        playerName: '',
-        money: 50000,
-        initialCapital: 50000,
-        day: 0,
-        month: 0,
-        customers: 0,
-        reputation: 0.5,
-        baristas: [],
-        equipment: 'basic',
-        rent: 0,
-        menuPrices: { coffee: 3 },
-        dailyLog: [],
-        eventLog: [],
-        isGameOver: false,
-        businessPlan: {},
-        inventory: { coffeeCups: 1000 },
-        loan: null, weather: 'Sunny', equipmentHealth: 1.0,
-    };
-    
-    planningState = {
-        step: 0,
-        playerName: '',
-        shopName: 'The Daily Grind',
-        location: 'downtown',
-        equipment: 'basic',
-        supplier: 'budget',
-        baristaCount: 1,
-        marketingBudget: 1000,
-    };
-
-    await setupFirestore();
-    render();
-};
-
-window.onload = init;
+// --- Initialize the Game ---
+document.addEventListener('DOMContentLoaded', () => {
+    setupFirestore(); // Setup Firebase first
+    render(); // Initial render based on the game state
+});
 </script>
 </body>
 </html>
