@@ -19,27 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, addDoc, setDoc, onSnapshot, collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        window.firebase = {
-            initializeApp,
-            getAuth,
-            signInAnonymously,
-            signInWithCustomToken,
-            onAuthStateChanged,
-            getFirestore,
-            doc,
-            addDoc,
-            onSnapshot,
-            collection,
-            query,
-            orderBy
-        };
-    </script>
-</head>
+    </head>
 <body class="bg-gray-100 font-inter">
 
 <div id="root" class="bg-gray-100 flex flex-col items-center justify-start min-h-screen p-4">
@@ -79,19 +59,34 @@
 <script type="module">
 "use strict";
 
+// --- Firebase SDK Imports (UPDATED to v12.0.0) ---
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, addDoc, setDoc, onSnapshot, collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+// --- Your web app's Firebase configuration (PASTED FROM YOUR PROVIDED SCRIPT INFO) ---
+const firebaseConfig = {
+    apiKey: "AIzaSyDo1GxUHgC0ws5__fcykyXOIx99QleK6PE",
+    authDomain: "build-a-coffee-shop.firebaseapp.com",
+    projectId: "build-a-coffee-shop",
+    storageBucket: "build-a-coffee-shop.firebasestorage.app",
+    messagingSenderId: "914283592902",
+    appId: "1:914283592902:web:c29e2f4ea4ec692d81abc7",
+    measurementId: "G-KHV9W49XN5"
+};
+
+const appId = firebaseConfig.appId; // Use the appId from your firebaseConfig
+const initialAuthToken = null; // Keep this null unless you have a specific custom auth token
+
 // --- Global state and configurations ---
 let gameState = {};
-// Make planningState a property of window to ensure it's globally accessible by inline event handlers
-window.planningState = {}; 
+window.planningState = {}; // Still making this global for easy access in render functions
 let gameInterval = null;
 let highScores = [];
-
-// Firebase setup
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 let db = null;
 let auth = null;
+let analytics = null; // Declare analytics variable
 let userId = null;
 
 // Data configurations, simplified to one menu item
@@ -124,10 +119,10 @@ const weatherConditions = ['Sunny', 'Rainy', 'Cloudy'];
 // --- High Score Functions using Firestore ---
 const setupFirestore = async () => {
     try {
-        const { initializeApp, getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, getFirestore, collection, onSnapshot, query, orderBy } = window.firebase;
         const app = initializeApp(firebaseConfig);
         auth = getAuth(app);
         db = getFirestore(app);
+        analytics = getAnalytics(app); // Initialize analytics here
 
         // Sign in the user
         if (initialAuthToken) {
@@ -148,7 +143,7 @@ const setupFirestore = async () => {
                 userId = crypto.randomUUID(); // Use a random UUID if not authenticated
                 listenForHighScores();
             }
-            window.render(); // Call global render
+            render(); // Call render after auth state is known
         });
 
     } catch (e) {
@@ -171,7 +166,7 @@ const listenForHighScores = () => {
         });
         highScores = scores.slice(0, 5); // Keep top 5 scores
         console.log("High scores updated:", highScores);
-        window.render(); // Re-render the UI to show the updated scores
+        render(); // Re-render the UI to show the updated scores
     }, (error) => {
         console.error("Error fetching high scores:", error);
     });
@@ -216,10 +211,15 @@ const showMessage = (title, message, onClose = () => {}) => {
 
     document.getElementById('message-box').classList.remove('hidden');
     const closeBtn = document.getElementById('message-close-btn');
-    closeBtn.onclick = () => {
+    if (closeBtn._eventListenerAdded) {
+        closeBtn.removeEventListener('click', closeBtn._eventListenerAdded);
+    }
+    const closeMessageListener = () => {
         document.getElementById('message-box').classList.add('hidden');
         onClose();
     };
+    closeBtn.addEventListener('click', closeMessageListener);
+    closeBtn._eventListenerAdded = closeMessageListener;
 };
 
 const showPriceModal = () => {
@@ -228,19 +228,30 @@ const showPriceModal = () => {
     const priceInput = document.getElementById('price-input');
     priceInput.value = gameState.menuPrices.coffee;
 
-    priceInput.onchange = (e) => {
+    // Remove previous event listener before adding a new one to prevent duplicates
+    if (priceInput._eventListenerAdded) {
+        priceInput.removeEventListener('change', priceInput._eventListenerAdded);
+    }
+    const priceChangeListener = (e) => {
         const newPrice = parseInt(e.target.value) || 0;
         if (newPrice > 0) {
               gameState.menuPrices.coffee = newPrice;
               addLog(`You adjusted the price of coffee to $${newPrice}.`, 'daily', 'text-teal-600');
         }
     };
+    priceInput.addEventListener('change', priceChangeListener);
+    priceInput._eventListenerAdded = priceChangeListener; // Store reference to remove later
     
     const closeBtn = document.getElementById('price-close-btn');
-    closeBtn.onclick = () => {
+    if (closeBtn._eventListenerAdded) {
+        closeBtn.removeEventListener('click', closeBtn._eventListenerAdded);
+    }
+    const closePriceModalListener = () => {
         priceModal.classList.add('hidden');
-        window.render(); // Call global render
+        render();
     };
+    closeBtn.addEventListener('click', closePriceModalListener);
+    closeBtn._eventListenerAdded = closePriceModalListener;
 };
 
 // --- Game Logic Functions ---
@@ -341,7 +352,7 @@ const gameLoop = () => {
     const cupsToSell = Math.min(customersToday, gameState.inventory.coffeeCups);
     
     if (cupsToSell > 0) {
-        servedCustomers = cupsToSell;
+        servedCustomers = cupsToell;
         revenue = (servedCustomers * gameState.menuPrices.coffee);
         totalIngredientCosts = (servedCustomers * costPerCup); 
     }
@@ -372,7 +383,7 @@ const gameLoop = () => {
         return;
     }
 
-    window.render(); // Call global render
+    render(); // Call global render
 };
 
 const handleAction = (actionType) => {
@@ -438,11 +449,10 @@ const handleAction = (actionType) => {
             showPriceModal();
             break;
     }
-    window.render(); // Call global render
+    render(); // Call global render
 };
 
-// Make handlePlanFinalization globally accessible
-window.handlePlanFinalization = () => {
+const handlePlanFinalization = () => {
     if (!window.planningState.playerName) {
         showMessage("Enter a Name", "Please enter your name to start the game.");
         return;
@@ -480,111 +490,112 @@ window.handlePlanFinalization = () => {
     };
 
     gameInterval = setInterval(gameLoop, 1500); // Day = 1.5s
-    window.render(); // Call global render
+    render(); // Call global render
 };
 
-// Make render function globally accessible
-window.render = () => {
-    if (gameState.isGameOver) {
-        renderGameOverPhase();
-    } else if (gameState.phase === 'planning') {
-        renderPlanningPhase();
-    } else if (gameState.phase === 'running') {
-        renderRunningPhase();
-    } else {
-        // Initialize planningState and set the initial phase if not already set
-        // Ensure planningState is initialized if the game is just starting
-        window.planningState = {
-            step: 0,
-            playerName: '',
-            shopName: 'My Coffee Shop',
-            location: 'suburbs',
-            equipment: 'basic',
-            supplier: 'budget',
-            baristaCount: 1,
-            marketingBudget: 0,
-        };
-        gameState.phase = 'planning'; // Set initial phase
-        renderPlanningPhase();
-    }
-};
-
-// --- Rendering functions (these can remain module-scoped as they are called by the global window.render) ---
+// --- Rendering functions ---
 const renderPlanningPhase = () => {
+    const plan = window.planningState;
     let content = '';
-    const plan = window.planningState; // Access global planningState
 
-    // Step 0: Player Name
+    // Helper to create input fields with event listeners
+    const createInputField = (id, type, value, placeholder, onInputHandler) => `
+        <input type="${type}" id="${id}" value="${value}"
+               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2"
+               placeholder="${placeholder}">
+        <script type="text/javascript"> // Ensure script is executed
+            document.getElementById('${id}').addEventListener('input', (e) => {
+                ${onInputHandler}
+                render(); // Re-render on input change
+            });
+        </script>
+    `;
+
+    // Helper to create select fields with event listeners
+    const createSelectField = (id, value, options, onChangeHandler) => `
+        <select id="${id}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+            ${options.map(opt => `<option value="${opt.value}" ${value === opt.value ? 'selected' : ''}>${opt.text}</option>`).join('')}
+        </select>
+        <script type="text/javascript"> // Ensure script is executed
+            document.getElementById('${id}').addEventListener('change', (e) => {
+                ${onChangeHandler}
+                render(); // Re-render on select change
+            });
+        </script>
+    `;
+
+    // Helper to create buttons with event listeners
+    const createButton = (text, onClickHandler, className = "") => `
+        <button class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 ${className}">
+            ${text}
+        </button>
+        <script type="text/javascript"> // Ensure script is executed
+            document.currentScript.previousElementSibling.addEventListener('click', ${onClickHandler});
+        </script>
+    `;
+
     if (plan.step === 0) {
         content = `
             <div class="space-y-6">
                 <label class="block text-lg font-medium text-gray-700">Your Name</label>
-                <input type="text" value="${plan.playerName}" oninput="window.planningState.playerName = this.value" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2" placeholder="e.g., Alex">
-                <button onclick="window.planningState.step = 1; window.render()" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Next</button>
+                ${createInputField('playerNameInput', 'text', plan.playerName, 'e.g., Alex', 'window.planningState.playerName = e.target.value;')}
+                ${createButton('Next', '() => { window.planningState.step = 1; render(); }', 'w-full')}
             </div>
         `;
-    }
-    // Step 1: Shop Name & Location
-    else if (plan.step === 1) {
+    } else if (plan.step === 1) {
         content = `
             <div class="space-y-6">
                 <label class="block text-lg font-medium text-gray-700">Shop Name</label>
-                <input type="text" value="${plan.shopName}" oninput="window.planningState.shopName = this.value" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2" placeholder="e.g., The Daily Grind">
+                ${createInputField('shopNameInput', 'text', plan.shopName, 'e.g., The Daily Grind', 'window.planningState.shopName = e.target.value;')}
                 <label class="block text-lg font-medium text-gray-700">Location</label>
-                <select onchange="window.planningState.location = this.value" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
-                    <option value="downtown" ${plan.location === 'downtown' ? 'selected' : ''}>$15,000 Rent/Month (High Traffic)</option>
-                    <option value="suburbs" ${plan.location === 'suburbs' ? 'selected' : ''}>$5,000 Rent/Month (Moderate Traffic)</option>
-                    <option value="college" ${plan.location === 'college' ? 'selected' : ''}>$10,000 Rent/Month (High Student Traffic)</option>
-                </select>
+                ${createSelectField('locationSelect', plan.location, [
+                    { value: 'downtown', text: '$15,000 Rent/Month (High Traffic)' },
+                    { value: 'suburbs', text: '$5,000 Rent/Month (Moderate Traffic)' },
+                    { value: 'college', text: '$10,000 Rent/Month (High Student Traffic)' }
+                ], 'window.planningState.location = e.target.value;')}
                 <div class="flex gap-4">
-                    <button onclick="window.planningState.step = 0; window.render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Previous</button>
-                    <button onclick="window.planningState.step = 2; window.render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Next</button>
+                    ${createButton('Previous', '() => { window.planningState.step = 0; render(); }', 'w-1/2')}
+                    ${createButton('Next', '() => { window.planningState.step = 2; render(); }', 'w-1/2')}
                 </div>
             </div>
         `;
-    } 
-    // Step 2: Equipment & Supplier
-    else if (plan.step === 2) {
+    } else if (plan.step === 2) {
         content = `
             <div class="space-y-6">
                 <label class="block text-lg font-medium text-gray-700">Equipment</label>
-                <select onchange="window.planningState.equipment = this.value" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
-                    <option value="basic" ${plan.equipment === 'basic' ? 'selected' : ''}>$10,000 (Slow, Low Quality)</option>
-                    <option value="standard" ${plan.equipment === 'standard' ? 'selected' : ''}>$25,000 (Average Speed, Good Quality)</option>
-                    <option value="pro" ${plan.equipment === 'pro' ? 'selected' : ''}>$40,000 (Fast, High Quality)</option>
-                </select>
+                ${createSelectField('equipmentSelect', plan.equipment, [
+                    { value: 'basic', text: '$10,000 (Slow, Low Quality)' },
+                    { value: 'standard', text: '$25,000 (Average Speed, Good Quality)' },
+                    { value: 'pro', text: '$40,000 (Fast, High Quality)' }
+                ], 'window.planningState.equipment = e.target.value;')}
                 <label class="block text-lg font-medium text-gray-700">Coffee Bean Supplier</label>
-                <select onchange="window.planningState.supplier = this.value" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
-                    <option value="budget" ${plan.supplier === 'budget' ? 'selected' : ''}>Budget Beans ($1.00 per cup, low quality)</option>
-                    <option value="premium" ${plan.supplier === 'premium' ? 'selected' : ''}>Premium Beans ($2.00 per cup, good quality)</option>
-                    <option value="gourmet" ${plan.supplier === 'gourmet' ? 'selected' : ''}>Gourmet Beans ($3.00 per cup, high quality)</option>
-                </select>
+                ${createSelectField('supplierSelect', plan.supplier, [
+                    { value: 'budget', text: 'Budget Beans ($1.00 per cup, low quality)' },
+                    { value: 'premium', text: 'Premium Beans ($2.00 per cup, good quality)' },
+                    { value: 'gourmet', text: 'Gourmet Beans ($3.00 per cup, high quality)' }
+                ], 'window.planningState.supplier = e.target.value;')}
                 <div class="flex gap-4">
-                    <button onclick="window.planningState.step = 1; window.render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Previous</button>
-                    <button onclick="window.planningState.step = 3; window.render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Next</button>
+                    ${createButton('Previous', '() => { window.planningState.step = 1; render(); }', 'w-1/2')}
+                    ${createButton('Next', '() => { window.planningState.step = 3; render(); }', 'w-1/2')}
                 </div>
             </div>
         `;
-    } 
-    // Step 3: Baristas & Marketing
-    else if (plan.step === 3) {
+    } else if (plan.step === 3) {
         content = `
             <div class="space-y-6">
                 <label class="block text-lg font-medium text-gray-700">Initial Baristas</label>
-                <input type="number" min="1" max="5" value="${plan.baristaCount}" oninput="window.planningState.baristaCount = parseInt(this.value)" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
+                ${createInputField('baristaCountInput', 'number', plan.baristaCount, '', 'window.planningState.baristaCount = parseInt(e.target.value) || 0;')}
                 <p class="text-sm text-gray-500">Each costs $2,500 upfront and in monthly salary.</p>
                 <label class="block text-lg font-medium text-gray-700">Initial Marketing Budget</label>
-                <input type="number" min="0" max="10000" step="500" value="${plan.marketingBudget}" oninput="window.planningState.marketingBudget = parseInt(this.value)" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
+                ${createInputField('marketingBudgetInput', 'number', plan.marketingBudget, '', 'window.planningState.marketingBudget = parseInt(e.target.value) || 0;')}
                 <p class="text-sm text-gray-500">One-time spend to get the word out on opening day.</p>
                 <div class="flex gap-4">
-                    <button onclick="window.planningState.step = 2; window.render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Previous</button>
-                    <button onclick="window.planningState.step = 4; window.render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Next</button>
+                    ${createButton('Previous', '() => { window.planningState.step = 2; render(); }', 'w-1/2')}
+                    ${createButton('Next', '() => { window.planningState.step = 4; render(); }', 'w-1/2')}
                 </div>
             </div>
         `;
-    } 
-    // Step 4: Finalize
-    else if (plan.step === 4) {
+    } else if (plan.step === 4) {
         const upfrontCost = configs.equipment[plan.equipment].cost + plan.baristaCount * 2500 + plan.marketingBudget;
         const startingCash = 50000 - upfrontCost;
         content = `
@@ -602,8 +613,8 @@ const renderPlanningPhase = () => {
                     <p class="font-bold"><span>Starting Cash:</span> $${startingCash.toLocaleString()}</p>
                 </div>
                 <div class="flex gap-4">
-                    <button onclick="window.planningState.step = 3; window.render()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Previous</button>
-                    <button onclick="window.handlePlanFinalization()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Open for Business!</button>
+                    ${createButton('Previous', '() => { window.planningState.step = 3; render(); }', 'w-1/2')}
+                    ${createButton('Open for Business!', 'handlePlanFinalization', 'w-1/2')}
                 </div>
             </div>
         `;
@@ -618,10 +629,17 @@ const renderPlanningPhase = () => {
             ${content}
         </div>
     `;
+
+    // Execute the dynamically added scripts after the content is in the DOM
+    document.querySelectorAll('#game-content script').forEach(script => {
+        const newScript = document.createElement('script');
+        Array.from(script.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+        newScript.textContent = script.textContent;
+        script.parentNode.replaceChild(newScript, script);
+    });
 };
 
 const renderRunningPhase = () => {
-    // Determine the next equipment upgrade and cost dynamically
     let nextUpgradeText = '';
     let nextUpgradeCost = 0;
     let isUpgradeAvailable = false;
@@ -657,7 +675,7 @@ const renderRunningPhase = () => {
                             <div class="font-bold text-lg">Customers</div>
                             <div class="text-2xl font-semibold">${gameState.customers.toLocaleString()}</div>
                         </div>
-                        <button onclick="handleAction('market')" ${gameState.money < 1000 ? 'disabled' : ''} class="mt-2 px-3 py-1 text-sm bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl transition duration-300 ${gameState.money < 1000 ? 'opacity-50 cursor-not-allowed' : ''}">
+                        <button id="marketBtn" class="mt-2 px-3 py-1 text-sm bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl transition duration-300 ${gameState.money < 1000 ? 'opacity-50 cursor-not-allowed' : ''}">
                             Marketing ($1,000)
                         </button>
                     </div>
@@ -688,19 +706,19 @@ const renderRunningPhase = () => {
                 <div class="bg-white p-6 rounded-xl shadow-md">
                     <h3 class="text-2xl font-bold text-gray-800 mb-4">Actions</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <button onclick="handleAction('hire')" ${gameState.money < 2500 ? 'disabled' : ''} class="bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 px-4 rounded-xl transition duration-300 ${gameState.money < 2500 ? 'opacity-50 cursor-not-allowed' : ''}">
+                        <button id="hireBtn" class="bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 px-4 rounded-xl transition duration-300 ${gameState.money < 2500 ? 'opacity-50 cursor-not-allowed' : ''}">
                             Hire Barista ($2,500)
                         </button>
-                        <button onclick="handleAction('upgrade')" ${!isUpgradeAvailable || gameState.money < nextUpgradeCost ? 'disabled' : ''} class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-xl transition duration-300 ${!isUpgradeAvailable || gameState.money < nextUpgradeCost ? 'opacity-50 cursor-not-allowed' : ''}">
+                        <button id="upgradeBtn" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-xl transition duration-300 ${!isUpgradeAvailable || gameState.money < nextUpgradeCost ? 'opacity-50 cursor-not-allowed' : ''}">
                             ${nextUpgradeText}
                         </button>
-                        <button onclick="handleAction('order_supplies')" ${gameState.money < (configs.supplyOrderSize * configs.supplyCosts.coffeeCup) ? 'disabled' : ''} class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-4 rounded-xl transition duration-300 ${gameState.money < (configs.supplyOrderSize * configs.supplyCosts.coffeeCup) ? 'opacity-50 cursor-not-allowed' : ''}">
+                        <button id="orderSuppliesBtn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-4 rounded-xl transition duration-300 ${gameState.money < (configs.supplyOrderSize * configs.supplyCosts.coffeeCup) ? 'opacity-50 cursor-not-allowed' : ''}">
                             Order Supplies ($${(configs.supplyOrderSize * configs.supplyCosts.coffeeCup).toFixed(2)})
                         </button>
-                        <button onclick="handleAction('take_loan')" ${gameState.loan ? 'disabled' : ''} class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-xl transition duration-300 ${gameState.loan ? 'opacity-50 cursor-not-allowed' : ''}">
+                        <button id="takeLoanBtn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-xl transition duration-300 ${gameState.loan ? 'opacity-50 cursor-not-allowed' : ''}">
                             Take Loan ($10,000)
                         </button>
-                        <button onclick="showPriceModal()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-xl transition duration-300">
+                        <button id="showPricesBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-xl transition duration-300">
                             Adjust Prices
                         </button>
                     </div>
@@ -724,21 +742,54 @@ const renderRunningPhase = () => {
             </div>
         </div>
     `;
+
+    // Attach event listeners for game actions after content is rendered
+    document.getElementById('marketBtn')?.addEventListener('click', () => handleAction('market'));
+    document.getElementById('hireBtn')?.addEventListener('click', () => handleAction('hire'));
+    document.getElementById('upgradeBtn')?.addEventListener('click', () => handleAction('upgrade'));
+    document.getElementById('orderSuppliesBtn')?.addEventListener('click', () => handleAction('order_supplies'));
+    document.getElementById('takeLoanBtn')?.addEventListener('click', () => handleAction('take_loan'));
+    document.getElementById('showPricesBtn')?.addEventListener('click', () => handleAction('show_prices'));
 };
 
 const renderGameOverPhase = () => {
     document.getElementById('game-content').innerHTML = `
         <div class="text-center space-y-6">
             <h2 class="text-3xl font-bold text-gray-800">Game Over!</h2>
-            <button onclick="window.location.reload()" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Play Again</button>
+            <button id="playAgainBtn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Play Again</button>
         </div>
     `;
+    document.getElementById('playAgainBtn')?.addEventListener('click', () => window.location.reload());
+};
+
+// The main render function (now truly global and responsible for controlling the UI flow)
+window.render = () => {
+    if (gameState.isGameOver) {
+        renderGameOverPhase();
+    } else if (gameState.phase === 'planning') {
+        renderPlanningPhase();
+    } else if (gameState.phase === 'running') {
+        renderRunningPhase();
+    } else {
+        window.planningState = {
+            step: 0,
+            playerName: '',
+            shopName: 'My Coffee Shop',
+            location: 'suburbs',
+            equipment: 'basic',
+            supplier: 'budget',
+            baristaCount: 1,
+            marketingBudget: 0,
+        };
+        gameState.phase = 'planning';
+        renderPlanningPhase();
+    }
 };
 
 // --- Initialize the Game ---
 document.addEventListener('DOMContentLoaded', () => {
-    setupFirestore(); // Setup Firebase first
-    window.render(); // Initial render using the global render function
+    setupFirestore();
+    render(); // Initial render
 });
 </script>
 </body>
