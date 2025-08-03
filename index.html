@@ -352,7 +352,7 @@ const gameLoop = () => {
     const cupsToSell = Math.min(customersToday, gameState.inventory.coffeeCups);
     
     if (cupsToSell > 0) {
-        servedCustomers = cupsToell;
+        servedCustomers = cupsToSell;
         revenue = (servedCustomers * gameState.menuPrices.coffee);
         totalIngredientCosts = (servedCustomers * costPerCup); 
     }
@@ -498,64 +498,49 @@ const renderPlanningPhase = () => {
     const plan = window.planningState;
     let content = '';
 
-    // Helper to create input fields with event listeners
-    const createInputField = (id, type, value, placeholder, onInputHandler) => `
+    // Helper to create input fields
+    const createInputField = (id, type, value, placeholder) => `
         <input type="${type}" id="${id}" value="${value}"
                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2"
                placeholder="${placeholder}">
-        <script type="text/javascript"> // Ensure script is executed
-            document.getElementById('${id}').addEventListener('input', (e) => {
-                ${onInputHandler}
-                render(); // Re-render on input change
-            });
-        </script>
     `;
 
-    // Helper to create select fields with event listeners
-    const createSelectField = (id, value, options, onChangeHandler) => `
+    // Helper to create select fields
+    const createSelectField = (id, value, options) => `
         <select id="${id}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
             ${options.map(opt => `<option value="${opt.value}" ${value === opt.value ? 'selected' : ''}>${opt.text}</option>`).join('')}
         </select>
-        <script type="text/javascript"> // Ensure script is executed
-            document.getElementById('${id}').addEventListener('change', (e) => {
-                ${onChangeHandler}
-                render(); // Re-render on select change
-            });
-        </script>
     `;
 
-    // Helper to create buttons with event listeners
-    const createButton = (text, onClickHandler, className = "") => `
-        <button class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 ${className}">
+    // Helper to create buttons
+    const createButton = (id, text, className = "") => `
+        <button id="${id}" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 ${className}">
             ${text}
         </button>
-        <script type="text/javascript"> // Ensure script is executed
-            document.currentScript.previousElementSibling.addEventListener('click', ${onClickHandler});
-        </script>
     `;
 
     if (plan.step === 0) {
         content = `
             <div class="space-y-6">
                 <label class="block text-lg font-medium text-gray-700">Your Name</label>
-                ${createInputField('playerNameInput', 'text', plan.playerName, 'e.g., Alex', 'window.planningState.playerName = e.target.value;')}
-                ${createButton('Next', '() => { window.planningState.step = 1; render(); }', 'w-full')}
+                ${createInputField('playerNameInput', 'text', plan.playerName, 'e.g., Alex')}
+                ${createButton('nextStep0Btn', 'Next', 'w-full')}
             </div>
         `;
     } else if (plan.step === 1) {
         content = `
             <div class="space-y-6">
                 <label class="block text-lg font-medium text-gray-700">Shop Name</label>
-                ${createInputField('shopNameInput', 'text', plan.shopName, 'e.g., The Daily Grind', 'window.planningState.shopName = e.target.value;')}
+                ${createInputField('shopNameInput', 'text', plan.shopName, 'e.g., The Daily Grind')}
                 <label class="block text-lg font-medium text-gray-700">Location</label>
                 ${createSelectField('locationSelect', plan.location, [
                     { value: 'downtown', text: '$15,000 Rent/Month (High Traffic)' },
                     { value: 'suburbs', text: '$5,000 Rent/Month (Moderate Traffic)' },
                     { value: 'college', text: '$10,000 Rent/Month (High Student Traffic)' }
-                ], 'window.planningState.location = e.target.value;')}
+                ])}
                 <div class="flex gap-4">
-                    ${createButton('Previous', '() => { window.planningState.step = 0; render(); }', 'w-1/2')}
-                    ${createButton('Next', '() => { window.planningState.step = 2; render(); }', 'w-1/2')}
+                    ${createButton('prevStep1Btn', 'Previous', 'w-1/2')}
+                    ${createButton('nextStep1Btn', 'Next', 'w-1/2')}
                 </div>
             </div>
         `;
@@ -567,16 +552,16 @@ const renderPlanningPhase = () => {
                     { value: 'basic', text: '$10,000 (Slow, Low Quality)' },
                     { value: 'standard', text: '$25,000 (Average Speed, Good Quality)' },
                     { value: 'pro', text: '$40,000 (Fast, High Quality)' }
-                ], 'window.planningState.equipment = e.target.value;')}
+                ])}
                 <label class="block text-lg font-medium text-gray-700">Coffee Bean Supplier</label>
                 ${createSelectField('supplierSelect', plan.supplier, [
                     { value: 'budget', text: 'Budget Beans ($1.00 per cup, low quality)' },
                     { value: 'premium', text: 'Premium Beans ($2.00 per cup, good quality)' },
                     { value: 'gourmet', text: 'Gourmet Beans ($3.00 per cup, high quality)' }
-                ], 'window.planningState.supplier = e.target.value;')}
+                ])}
                 <div class="flex gap-4">
-                    ${createButton('Previous', '() => { window.planningState.step = 1; render(); }', 'w-1/2')}
-                    ${createButton('Next', '() => { window.planningState.step = 3; render(); }', 'w-1/2')}
+                    ${createButton('prevStep2Btn', 'Previous', 'w-1/2')}
+                    ${createButton('nextStep2Btn', 'Next', 'w-1/2')}
                 </div>
             </div>
         `;
@@ -584,14 +569,14 @@ const renderPlanningPhase = () => {
         content = `
             <div class="space-y-6">
                 <label class="block text-lg font-medium text-gray-700">Initial Baristas</label>
-                ${createInputField('baristaCountInput', 'number', plan.baristaCount, '', 'window.planningState.baristaCount = parseInt(e.target.value) || 0;')}
+                ${createInputField('baristaCountInput', 'number', plan.baristaCount, '')}
                 <p class="text-sm text-gray-500">Each costs $2,500 upfront and in monthly salary.</p>
                 <label class="block text-lg font-medium text-gray-700">Initial Marketing Budget</label>
-                ${createInputField('marketingBudgetInput', 'number', plan.marketingBudget, '', 'window.planningState.marketingBudget = parseInt(e.target.value) || 0;')}
+                ${createInputField('marketingBudgetInput', 'number', plan.marketingBudget, '')}
                 <p class="text-sm text-gray-500">One-time spend to get the word out on opening day.</p>
                 <div class="flex gap-4">
-                    ${createButton('Previous', '() => { window.planningState.step = 2; render(); }', 'w-1/2')}
-                    ${createButton('Next', '() => { window.planningState.step = 4; render(); }', 'w-1/2')}
+                    ${createButton('prevStep3Btn', 'Previous', 'w-1/2')}
+                    ${createButton('nextStep3Btn', 'Next', 'w-1/2')}
                 </div>
             </div>
         `;
@@ -613,8 +598,8 @@ const renderPlanningPhase = () => {
                     <p class="font-bold"><span>Starting Cash:</span> $${startingCash.toLocaleString()}</p>
                 </div>
                 <div class="flex gap-4">
-                    ${createButton('Previous', '() => { window.planningState.step = 3; render(); }', 'w-1/2')}
-                    ${createButton('Open for Business!', 'handlePlanFinalization', 'w-1/2')}
+                    ${createButton('prevStep4Btn', 'Previous', 'w-1/2')}
+                    ${createButton('openBusinessBtn', 'Open for Business!', 'w-1/2')}
                 </div>
             </div>
         `;
@@ -630,13 +615,74 @@ const renderPlanningPhase = () => {
         </div>
     `;
 
-    // Execute the dynamically added scripts after the content is in the DOM
-    document.querySelectorAll('#game-content script').forEach(script => {
-        const newScript = document.createElement('script');
-        Array.from(script.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
-        newScript.textContent = script.textContent;
-        script.parentNode.replaceChild(newScript, script);
-    });
+    // --- Attach Event Listeners AFTER HTML is in the DOM ---
+    if (plan.step === 0) {
+        document.getElementById('playerNameInput')?.addEventListener('input', (e) => {
+            window.planningState.playerName = e.target.value;
+            render();
+        });
+        document.getElementById('nextStep0Btn')?.addEventListener('click', () => {
+            window.planningState.step = 1;
+            render();
+        });
+    } else if (plan.step === 1) {
+        document.getElementById('shopNameInput')?.addEventListener('input', (e) => {
+            window.planningState.shopName = e.target.value;
+            render();
+        });
+        document.getElementById('locationSelect')?.addEventListener('change', (e) => {
+            window.planningState.location = e.target.value;
+            render();
+        });
+        document.getElementById('prevStep1Btn')?.addEventListener('click', () => {
+            window.planningState.step = 0;
+            render();
+        });
+        document.getElementById('nextStep1Btn')?.addEventListener('click', () => {
+            window.planningState.step = 2;
+            render();
+        });
+    } else if (plan.step === 2) {
+        document.getElementById('equipmentSelect')?.addEventListener('change', (e) => {
+            window.planningState.equipment = e.target.value;
+            render();
+        });
+        document.getElementById('supplierSelect')?.addEventListener('change', (e) => {
+            window.planningState.supplier = e.target.value;
+            render();
+        });
+        document.getElementById('prevStep2Btn')?.addEventListener('click', () => {
+            window.planningState.step = 1;
+            render();
+        });
+        document.getElementById('nextStep2Btn')?.addEventListener('click', () => {
+            window.planningState.step = 3;
+            render();
+        });
+    } else if (plan.step === 3) {
+        document.getElementById('baristaCountInput')?.addEventListener('input', (e) => {
+            window.planningState.baristaCount = parseInt(e.target.value) || 0;
+            render();
+        });
+        document.getElementById('marketingBudgetInput')?.addEventListener('input', (e) => {
+            window.planningState.marketingBudget = parseInt(e.target.value) || 0;
+            render();
+        });
+        document.getElementById('prevStep3Btn')?.addEventListener('click', () => {
+            window.planningState.step = 2;
+            render();
+        });
+        document.getElementById('nextStep3Btn')?.addEventListener('click', () => {
+            window.planningState.step = 4;
+            render();
+        });
+    } else if (plan.step === 4) {
+        document.getElementById('prevStep4Btn')?.addEventListener('click', () => {
+            window.planningState.step = 3;
+            render();
+        });
+        document.getElementById('openBusinessBtn')?.addEventListener('click', handlePlanFinalization);
+    }
 };
 
 const renderRunningPhase = () => {
