@@ -3,841 +3,789 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coffee Shop Simulator</title>
+    <title>Build a Coffee Shop</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              inter: ['Inter', 'sans-serif'],
-            }
-          }
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <style>
+        body {
+            font-family: 'Lato', sans-serif;
+            background-color: #f7fafc;
         }
-      }
-    </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+        h1, h2 {
+            font-family: 'Pacifico', cursive;
+        }
+        .container {
+            max-width: 960px;
+        }
+        .section-box {
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .progress-bar {
+            width: 0%;
+            transition: width 0.5s ease-in-out;
+        }
+        .btn-primary {
+            @apply bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded;
+        }
+        .btn-secondary {
+            @apply bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded;
+        }
+        .tooltip-container {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip-text {
+            visibility: hidden;
+            width: 200px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 0;
+            position: absolute;
+            z-index: 1000;
+            bottom: 125%; /* Position above the button */
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8rem;
+        }
+        .tooltip-container:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 font-inter">
+<body class="bg-gray-100 min-h-screen flex items-center justify-center py-10">
+    <div class="container mx-auto px-4">
+        <h1 class="text-6xl text-center text-red-500 mb-8">Build a Coffee Shop</h1>
 
-<div id="root" class="bg-gray-100 flex flex-col items-center justify-start min-h-screen p-4">
-    <div id="game-container" class="bg-white rounded-2xl shadow-2xl p-6 md:p-10 max-w-5xl w-full flex flex-col gap-8">
-        <h1 class="text-4xl font-bold text-center text-gray-800 mb-6">Coffee Shop Simulator</h1>
-        <div id="game-content"></div>
-    </div>
-    <div id="message-box" class="fixed inset-0 bg-gray-500/50 flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-white border border-gray-300 rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-            <h3 id="message-title" class="text-2xl font-bold text-gray-900 mb-4"></h3>
-            <p id="message-text" class="text-gray-700 mb-6"></p>
-            <div id="high-score-list" class="my-4 text-left"></div>
-            <div class="flex justify-center">
-                <button id="message-close-btn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">OK</button>
-            </div>
-        </div>
-    </div>
-    <div id="price-modal" class="fixed inset-0 bg-gray-500/50 flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-white border border-gray-300 rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-            <div class="space-y-2">
-                <h3 class="text-2xl font-bold text-gray-900 mb-4">Adjust Menu Prices</h3>
-                <p class="text-gray-700 mb-6">Set the price for your coffee.</p>
-            </div>
-            <div class="grid gap-4 py-4">
-                <div class="grid grid-cols-4 items-center gap-4">
-                    <label for="price-input" class="col-span-2 text-right block text-lg font-medium text-gray-700">Coffee</label>
-                    <input id="price-input" type="number" class="col-span-2 mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
+        <div id="game-container" class="bg-white rounded-lg shadow-xl p-8">
+            <div id="start-screen">
+                <p class="text-lg text-gray-700 text-center mb-6">Welcome to Coffee Tycoon! Your goal is to build the most successful coffee shop in town.</p>
+                <div class="flex justify-center">
+                    <button id="start-game-btn" class="btn-primary text-xl">Start New Game</button>
                 </div>
             </div>
-            <div class="flex justify-center">
-                <button id="price-close-btn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Close</button>
+
+            <div id="planning-phase" class="hidden">
+                <h2 class="text-4xl text-center text-blue-600 mb-6">Planning Phase</h2>
+                <div class="text-center text-gray-700 text-lg mb-4">
+                    <p>Current Step: <span id="planning-step-text"></span></p>
+                    <p>Upfront Costs: $<span id="upfront-cost">0</span></p>
+                </div>
+
+                <div id="planning-step-1" class="planning-step hidden section-box">
+                    <h3 class="text-2xl font-bold mb-4">Step 1: Choose Your Location</h3>
+                    <div id="location-options" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        </div>
+                    <div class="flex justify-end mt-6">
+                        <button id="next-step-1" class="btn-primary" disabled>Next</button>
+                    </div>
+                </div>
+
+                <div id="planning-step-2" class="planning-step hidden section-box">
+                    <h3 class="text-2xl font-bold mb-4">Step 2: Design Your Menu</h3>
+                    <div id="menu-options" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        </div>
+                    <div class="flex justify-end mt-6">
+                        <button id="next-step-2" class="btn-primary" disabled>Next</button>
+                    </div>
+                </div>
+
+                <div id="planning-step-3" class="planning-step hidden section-box">
+                    <h3 class="text-2xl font-bold mb-4">Step 3: Staffing & Marketing</h3>
+                    <div class="mb-4">
+                        <label for="staffCountInput" class="block text-gray-700 text-sm font-bold mb-2">Number of Staff (2-10):</label>
+                        <input type="number" id="staffCountInput" min="2" max="10" value="2" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    </div>
+                    <div class="flex justify-end mt-6">
+                        <button id="next-step-3" class="btn-primary">Finalize Plan</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="operations-phase" class="hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                    <div class="lg:col-span-2 section-box">
+                        <h2 class="text-3xl text-blue-600 mb-4">Business Overview</h2>
+                        <p class="text-xl font-bold mb-2">Day: <span id="day-counter">1</span></p>
+                        <p class="text-xl font-bold mb-2">Money: $<span id="money-display">0</span></p>
+                        <p class="text-xl font-bold mb-2">Customers: <span id="customers-display">0</span></p>
+                        <p class="text-xl font-bold mb-2">Reputation: <span id="reputation-display">50</span>/100</p>
+                        <p class="text-xl font-bold mb-2">Staff: <span id="staff-display">2</span></p>
+                        <div class="mt-4">
+                            <h3 class="text-xl font-bold mb-2">Coffee Machine Health:</h3>
+                            <div class="w-full bg-gray-200 rounded-full h-4">
+                                <div id="machine-health-bar" class="bg-red-500 h-4 rounded-full progress-bar"></div>
+                            </div>
+                            <span id="machine-health-text" class="text-sm text-gray-600"></span>
+                        </div>
+                    </div>
+
+                    <div class="section-box">
+                        <h2 class="text-3xl text-blue-600 mb-4">Actions</h2>
+                        <div class="space-y-4">
+                            <div class="tooltip-container w-full">
+                                <button id="action-market-btn" class="btn-primary w-full">Marketing ($1,000)</button>
+                                <span class="tooltip-text">Boosts customer acquisition.</span>
+                            </div>
+                            <div class="tooltip-container w-full">
+                                <button id="action-train-btn" class="btn-primary w-full">Staff Training ($500 per staff)</button>
+                                <span class="tooltip-text">Increases staff efficiency and customer satisfaction.</span>
+                            </div>
+                            <div class="tooltip-container w-full">
+                                <button id="action-refurbish-btn" class="btn-primary w-full">Refurbish Shop ($2,000)</button>
+                                <span class="tooltip-text">Improves shop appeal and machine health.</span>
+                            </div>
+                            <div class="tooltip-container w-full">
+                                <button id="action-repair-btn" class="btn-primary w-full">Repair Machine ($1,500)</button>
+                                <span class="tooltip-text">Fully restores coffee machine health.</span>
+                            </div>
+                            <div class="tooltip-container w-full">
+                                <button id="action-hire-btn" class="btn-primary w-full">Hire Staff ($100 upfront, $50 daily)</button>
+                                <span class="tooltip-text">Increases staff count, improving service speed. Max 10 staff.</span>
+                            </div>
+                            <div class="tooltip-container w-full">
+                                <button id="action-fire-btn" class="btn-secondary w-full">Fire Staff (No Cost)</button>
+                                <span class="tooltip-text">Reduces staff count, but can decrease reputation. Min 2 staff.</span>
+                            </div>
+                        </div>
+                        <button id="end-day-btn" class="btn-primary w-full mt-6 text-xl">End Day</button>
+                    </div>
+                </div>
+
+                <div class="section-box">
+                    <h2 class="text-3xl text-blue-600 mb-4">Daily Log</h2>
+                    <div id="daily-log" class="bg-gray-50 p-4 rounded h-48 overflow-y-auto text-sm">
+                        </div>
+                </div>
+            </div>
+
+            <div id="game-over-screen" class="hidden">
+                <h2 class="text-4xl text-center text-red-600 mb-6">Game Over!</h2>
+                <p id="game-over-reason" class="text-lg text-gray-700 text-center mb-4"></p>
+                <p class="text-xl font-bold text-center mb-6">Days Survived: <span id="final-days">0</span></p>
+                <p class="text-xl font-bold text-center mb-6">Final Money: $<span id="final-money">0</span></p>
+                <p class="text-xl font-bold text-center mb-6">Customers Served: <span id="final-customers-served">0</span></p>
+
+                <div class="section-box mt-8">
+                    <h3 class="text-3xl text-center text-green-600 mb-4">High Scores</h3>
+                    <div id="high-scores-list" class="text-center text-lg">
+                        <p class="text-gray-500">Loading high scores...</p>
+                    </div>
+                </div>
+
+                <div class="flex justify-center mt-8">
+                    <button id="restart-game-btn" class="btn-primary text-xl">Play Again</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<script type="module">
-"use strict";
+    <script>
+        // Firebase Configuration (REPLACE WITH YOUR ACTUAL CONFIG)
+        const firebaseConfig = {
+            apiKey: "AIzaSyDo1GxUHgC0ws5__fcykyXOIx99QleK6PE",
+            authDomain: "build-a-coffee-shop.firebaseapp.com",
+            projectId: "build-a-coffee-shop",
+            storageBucket: "build-a-coffee-shop.appspot.com",
+            messagingSenderId: "914283592902",
+            appId: "1:914283592902:web:c29e2f4ea4ec692d81abc7",
+            measurementId: "G-D1D348XG7X"
+        };
 
-// --- Firebase SDK Imports (UPDATED to v12.0.0 and including Auth, Firestore) ---
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, addDoc, setDoc, onSnapshot, collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // Firebase Anonymous Authentication
+        let currentUserId = null;
+        auth.signInAnonymously()
+            .then((userCredential) => {
+                currentUserId = userCredential.user.uid;
+                console.log("Authenticated with user ID:", currentUserId);
+            })
+            .catch((error) => {
+                console.error("Firebase Auth Error:", error);
+                addLog("Authentication failed. High scores might not be saved.", 'error', 'text-red-500');
+            });
 
 
-// --- Your web app's Firebase configuration ---
-const firebaseConfig = {
-    apiKey: "AIzaSyDo1GxUHgC0ws5__fcykyXOIx99QleK6PE",
-    authDomain: "build-a-coffee-shop.firebaseapp.com",
-    projectId: "build-a-coffee-shop",
-    storageBucket: "build-a-coffee-shop.firebasestorage.app",
-    messagingSenderId: "914283592902",
-    appId: "1:914283592902:web:c29e2f4ea4ec692d81abc7",
-    measurementId: "G-KHV9W49XN5"
-};
+        // DOM Elements
+        const startGameBtn = document.getElementById('start-game-btn');
+        const startScreen = document.getElementById('start-screen');
+        const planningPhase = document.getElementById('planning-phase');
+        const operationsPhase = document.getElementById('operations-phase');
+        const gameOverScreen = document.getElementById('game-over-screen');
 
-const appId = firebaseConfig.appId;
-const initialAuthToken = null;
+        const planningStepText = document.getElementById('planning-step-text');
+        const upfrontCostDisplay = document.getElementById('upfront-cost');
 
-// --- Global state and configurations ---
-let gameState = {};
-window.planningState = {};
-let gameInterval = null;
-let highScores = [];
-let db = null; 
-let auth = null; 
-let analytics = null;
-let userId = null;
+        const planningStep1 = document.getElementById('planning-step-1');
+        const locationOptions = document.getElementById('location-options');
+        const nextStep1Btn = document.getElementById('next-step-1');
 
-// Data configurations, simplified to one menu item
-const configs = {
-    locations: {
-        downtown: { name: 'Downtown', rent: 15000, customerTraffic: 1.5, competition: 1.2 },
-        suburbs: { name: 'Suburbs', rent: 5000, customerTraffic: 0.8, competition: 0.5 },
-        college: { name: 'College Campus', rent: 10000, customerTraffic: 1.2, competition: 1.0 },
-    },
-    equipment: {
-        basic: { name: 'Basic', cost: 10000, quality: 0.5 },
-        standard: { name: 'Standard', cost: 25000, quality: 0.8 },
-        pro: { name: 'Pro', cost: 40000, quality: 1.2 },
-    },
-    suppliers: {
-        budget: { name: 'Budget Beans', costPerCup: 1.0, qualityFactor: 0.5 },
-        premium: { name: 'Premium Blend', costPerCup: 2.0, qualityFactor: 1.0 },
-        gourmet: { name: 'Gourmet Reserve', costPerCup: 3.0, qualityFactor: 1.5 },
-    },
-    menuItems: [
-        { id: 'coffee', name: 'Coffee', baseCost: 1.5, basePrice: 3, qualityFactor: 1.0 },
-    ],
-    baristaSkills: ['Speed', 'Quality', 'Charm'],
-    supplyCosts: { coffeeCup: 1.0 },
-    supplyOrderSize: 10000,
-};
+        const planningStep2 = document.getElementById('planning-step-2');
+        const menuOptions = document.getElementById('menu-options');
+        const nextStep2Btn = document.getElementById('next-step-2');
 
-const weatherConditions = ['Sunny', 'Rainy', 'Cloudy'];
+        const planningStep3 = document.getElementById('planning-step-3');
+        const staffCountInput = document.getElementById('staffCountInput');
+        // const marketingBudgetInput = document.getElementById('marketingBudgetInput'); // Removed
+        const nextStep3Btn = document.getElementById('next-step-3');
 
-// --- High Score Functions using Firestore ---
-const setupFirestore = async () => {
-    try {
-        const app = initializeApp(firebaseConfig);
-        auth = getAuth(app);       // Initialize Firebase Authentication
-        db = getFirestore(app);     // Initialize Firestore
-        analytics = getAnalytics(app); 
+        const dayCounterDisplay = document.getElementById('day-counter');
+        const moneyDisplay = document.getElementById('money-display');
+        const customersDisplay = document.getElementById('customers-display');
+        const reputationDisplay = document.getElementById('reputation-display');
+        const staffDisplay = document.getElementById('staff-display');
+        const machineHealthBar = document.getElementById('machine-health-bar');
+        const machineHealthText = document.getElementById('machine-health-text');
 
-        // Sign in the user
-        if (initialAuthToken) {
-            await signInWithCustomToken(auth, initialAuthToken);
-        } else {
-            await signInAnonymously(auth);
+        const actionMarketBtn = document.getElementById('action-market-btn');
+        const actionTrainBtn = document.getElementById('action-train-btn');
+        const actionRefurbishBtn = document.getElementById('action-refurbish-btn');
+        const actionRepairBtn = document.getElementById('action-repair-btn');
+        const actionHireBtn = document.getElementById('action-hire-btn');
+        const actionFireBtn = document.getElementById('action-fire-btn');
+        const endDayBtn = document.getElementById('end-day-btn');
+        const dailyLog = document.getElementById('daily-log');
+
+        const gameOverReason = document.getElementById('game-over-reason');
+        const finalDaysDisplay = document.getElementById('final-days');
+        const finalMoneyDisplay = document.getElementById('final-money');
+        const finalCustomersServedDisplay = document.getElementById('final-customers-served');
+        const highScoresList = document.getElementById('high-scores-list');
+        const restartGameBtn = document.getElementById('restart-game-btn');
+
+
+        // Game State
+        let gameState = {};
+        let planningState = {};
+        let planningStep = 0;
+        let gameInterval; // To hold the setInterval ID
+
+        // Game Configuration Data
+        const locations = [
+            { id: 'downtown', name: 'Downtown Core', rent: 2000, customerTraffic: 1.2, competition: 8, description: 'High foot traffic, but fierce competition.' },
+            { id: 'suburb', name: 'Quiet Suburbs', rent: 800, customerTraffic: 0.8, competition: 3, description: 'Lower rent, loyal local customers.' },
+            { id: 'university', name: 'University Campus', rent: 1500, customerTraffic: 1.5, competition: 6, description: 'Lots of students, but demanding tastes.' },
+        ];
+
+        const menus = [
+            { id: 'standard', name: 'Standard Menu', cost: 500, quality: 0.8, description: 'Basic coffee and pastries. Low cost, low quality perception.' },
+            { id: 'premium', name: 'Premium Menu', cost: 1500, quality: 1.2, description: 'Gourmet beans and artisanal treats. Higher cost, better quality.' },
+            { id: 'specialty', name: 'Specialty Menu', cost: 3000, quality: 1.5, description: 'Unique, exotic coffees and custom drinks. High cost, attracts connoisseurs.' },
+        ];
+
+        const serviceCosts = {
+            market: 1000,
+            train: 500,
+            refurbish: 2000,
+            repair: 1500,
+            hire: 100, // Upfront cost, daily cost handled in logic
+            fire: 0
+        };
+
+        // --- Core Game Logic ---
+
+        function initializeGame() {
+            gameState = {
+                day: 0,
+                money: 5000, // Starting money
+                customers: 0,
+                reputation: 50, // Out of 100
+                staff: 0,
+                machineHealth: 100, // Out of 100
+                totalCustomersServed: 0,
+                businessPlan: {
+                    location: null,
+                    menu: null,
+                    staffCount: 0,
+                    // marketingBudget: 0, // Removed
+                },
+                logs: [], // Store daily log messages
+            };
+
+            planningState = {
+                selectedLocation: null,
+                selectedMenu: null,
+                staffCount: 2,
+                // marketingBudget: 0, // Removed
+            };
+
+            planningStep = 0;
+            updateUpfrontCost();
+            renderPlanningPhase(1); // Start planning phase at step 1
+            hideAllScreens();
+            planningPhase.classList.remove('hidden');
         }
 
-        // Listen for auth state changes and set the user ID
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                userId = user.uid;
-                console.log("Authenticated with user ID:", userId);
-                // Start listening for high scores once authenticated
-                listenForHighScores();
-            } else {
-                console.log("No user is signed in.");
-                userId = crypto.randomUUID(); 
-                listenForHighScores();
+        function updateUpfrontCost() {
+            let cost = 0;
+            if (planningState.selectedMenu) {
+                cost += planningState.selectedMenu.cost;
             }
-            render(); // Call render after auth state is known
-        });
-
-    } catch (e) {
-        console.error("Error setting up Firebase:", e);
-    }
-};
-
-const listenForHighScores = () => {
-    if (!db) {
-        console.error("Firestore is not initialized.");
-        return;
-    }
-    const highScoresRef = collection(db, `/artifacts/${appId}/public/data/highScores`);
-    const q = query(highScoresRef, orderBy('days'), orderBy('playerName'));
-
-    onSnapshot(q, (snapshot) => {
-        const scores = [];
-        snapshot.forEach((doc) => {
-            scores.push({ ...doc.data(), id: doc.id });
-        });
-        highScores = scores.slice(0, 5); 
-        console.log("High scores updated:", highScores);
-        render(); 
-    }, (error) => {
-        console.error("Error fetching high scores:", error);
-    });
-};
-
-const saveHighScoreToFirestore = async (playerName, days) => {
-    if (!db) {
-        console.error("Firestore is not initialized.");
-        return;
-    }
-    const highScoresRef = collection(db, `/artifacts/${appId}/public/data/highScores`);
-    try {
-        await addDoc(highScoresRef, {
-            playerName,
-            days,
-            timestamp: new Date()
-        });
-        console.log("High score saved successfully!");
-    } catch (e) {
-        console.error("Error saving high score:", e);
-    }
-};
-
-// --- Helper Functions for UI ---
-const showMessage = (title, message, onClose = () => {}) => {
-    document.getElementById('message-title').innerText = title;
-    document.getElementById('message-text').innerText = message;
-    
-    const highScoreListDiv = document.getElementById('high-score-list');
-    highScoreListDiv.innerHTML = ''; 
-    
-    // Always attempt to display high scores if available
-    if (highScores && highScores.length > 0) {
-        let scoresHTML = '<h4 class="text-xl font-bold mb-2">High Scores</h4><ol class="list-decimal list-inside space-y-1">';
-        highScores.forEach((score, index) => {
-            scoresHTML += `<li class="flex justify-between items-center bg-gray-100 p-2 rounded-md"><span class="font-medium">${score.playerName}</span><span class="text-sm text-gray-600">${score.days} days</span></li>`;
-        });
-        scoresHTML += '</ol>';
-        highScoreListDiv.innerHTML = scoresHTML;
-    } else {
-        highScoreListDiv.innerHTML = '<p class="text-gray-500">No high scores yet. Be the first!</p>';
-    }
-
-    document.getElementById('message-box').classList.remove('hidden');
-    const closeBtn = document.getElementById('message-close-btn');
-    if (closeBtn._eventListenerAdded) {
-        closeBtn.removeEventListener('click', closeBtn._eventListenerAdded);
-    }
-    const closeMessageListener = () => {
-        document.getElementById('message-box').classList.add('hidden');
-        onClose();
-    };
-    closeBtn.addEventListener('click', closeMessageListener);
-    closeBtn._eventListenerAdded = closeMessageListener;
-};
-
-const showPriceModal = () => {
-    const priceModal = document.getElementById('price-modal');
-    priceModal.classList.remove('hidden');
-    const priceInput = document.getElementById('price-input');
-    priceInput.value = gameState.menuPrices.coffee;
-
-    if (priceInput._eventListenerAdded) {
-        priceInput.removeEventListener('change', priceInput._eventListenerAdded);
-    }
-    const priceChangeListener = (e) => {
-        const newPrice = parseInt(e.target.value) || 0;
-        if (newPrice > 0) {
-              gameState.menuPrices.coffee = newPrice;
-              addLog(`You adjusted the price of coffee to $${newPrice}.`, 'daily', 'text-teal-600');
+            cost += planningState.staffCount * 100; // Initial hiring cost for staff
+            // cost += planningState.marketingBudget; // Removed
+            upfrontCostDisplay.textContent = cost;
         }
-    };
-    priceInput.addEventListener('change', priceChangeListener);
-    priceInput._eventListenerAdded = priceChangeListener; 
-    
-    const closeBtn = document.getElementById('price-close-btn');
-    if (closeBtn._eventListenerAdded) {
-        closeBtn.removeEventListener('click', closeBtn._eventListenerAdded);
-    }
-    const closePriceModalListener = () => {
-        priceModal.classList.add('hidden');
-        render();
-    };
-    closeBtn.addEventListener('click', closePriceModalListener);
-    closeBtn._eventListenerAdded = closePriceModalListener;
-};
 
-// --- Game Logic Functions ---
-const addLog = (message, type = 'daily', color = 'text-gray-600') => {
-    const newLogEntry = { message, color, day: gameState.day };
-    if (type === 'event') {
-        gameState.eventLog.unshift(newLogEntry);
-        gameState.eventLog = gameState.eventLog.slice(0, 10);
-    } else {
-        gameState.dailyLog.unshift(newLogEntry);
-        gameState.dailyLog = gameState.dailyLog.slice(0, 20);
-    }
-};
+        function renderPlanningPhase(step) {
+            planningStep = step;
+            planningStepText.textContent = step;
+            document.querySelectorAll('.planning-step').forEach(el => el.classList.add('hidden'));
 
-const endGame = (message) => {
-    clearInterval(gameInterval);
-    gameState.isGameOver = true;
-    gameState.phase = 'gameover';
-    
-    // Check if the player won to save the score
-    if (gameState.customers >= 100000) {
-        saveHighScoreToFirestore(gameState.playerName, gameState.day);
-    }
-
-    // Pass the actual `highScores` array to showMessage so it can display them.
-    showMessage("Game Over", message, () => window.location.reload());
-};
-
-const handleRandomEvent = () => {
-  const eventChance = Math.random();
-  if (eventChance < 0.1) { 
-    const events = [
-      { type: 'positive', message: 'A local food blogger gave you a great review! Reputation boosted!', action: () => {
-        gameState.reputation = Math.min(1.0, gameState.reputation + 0.05);
-        addLog("A popular food blogger posted a rave review of your shop! Reputation boosted!", 'event', 'text-green-600 font-bold');
-      }},
-      { type: 'negative', message: 'Oh no! Your espresso machine broke down. Repairs will cost $5,000.', action: () => {
-        gameState.money -= 5000;
-        gameState.equipmentHealth = 0.5;
-        addLog("Equipment breakdown! Repairs cost $5,000. Your equipment health is now 50%.", 'event', 'text-red-600 font-bold');
-      }},
-      { type: 'neutral', message: 'A local competitor is offering a new deal. You chose to ignore it, but your reputation took a small hit.', action: () => {
-        gameState.reputation = Math.max(0.1, gameState.reputation - 0.03);
-        addLog("You noticed a competitor's new deal. You chose to ignore it, which slightly impacted your reputation.", 'event', 'text-yellow-600 font-bold');
-      }},
-    ];
-
-    const event = events[Math.floor(Math.random() * events.length)];
-    event.action();
-  }
-};
-
-const gameLoop = () => {
-    if (gameState.isGameOver) return;
-    
-    gameState.day++;
-    const newMonth = Math.floor(gameState.day / 30);
-    const isMonthEnd = gameState.day % 30 === 0;
-
-    // Monthly expenses
-    if (isMonthEnd) {
-        const totalMonthlyExpenses = gameState.rent + (gameState.loan ? gameState.loan.payment : 0);
-        gameState.money -= totalMonthlyExpenses;
-        addLog(`End of Month ${newMonth}: Paid rent ($${gameState.rent}) and loan payments ($${gameState.loan ? gameState.loan.payment : 0}). Total: $${totalMonthlyExpenses}.`, 'daily', 'text-red-600');
-        if (gameState.money <= 0) {
-            endGame(`You ran out of money at the end of the month! Your shop has closed.`);
-            return;
+            if (step === 1) {
+                planningStep1.classList.remove('hidden');
+                renderLocationOptions();
+                nextStep1Btn.disabled = !planningState.selectedLocation;
+            } else if (step === 2) {
+                planningStep2.classList.remove('hidden');
+                renderMenuOptions();
+                nextStep2Btn.disabled = !planningState.selectedMenu;
+            } else if (step === 3) {
+                planningStep3.classList.remove('hidden');
+                staffCountInput.value = planningState.staffCount;
+                // marketingBudgetInput.value = planningState.marketingBudget; // Removed
+            }
         }
-    }
 
-    // Natural decay
-    gameState.baristas.forEach(b => b.morale = Math.max(0, b.morale - 0.005));
-    gameState.equipmentHealth = Math.max(0, gameState.equipmentHealth - 0.005);
-    
-    // Random events
-    handleRandomEvent();
-    
-    // Generate weather and day of the week
-    gameState.weather = weatherConditions[Math.floor(Math.random() * weatherConditions.length)];
-    const isWeekend = (gameState.day % 7 === 6 || gameState.day % 7 === 0);
-
-    // Calculate daily income
-    const { locationConfig, supplierConfig, equipmentConfig } = gameState.businessPlan;
-    let dailyTraffic = (gameState.customers === 0 ? gameState.businessPlan.marketingBudget / 50 : gameState.customers) * locationConfig.customerTraffic;
-    
-    if (isWeekend) dailyTraffic *= 1.5;
-    if (gameState.weather === 'Rainy') dailyTraffic *= 1.2;
-    
-    let customersToday = Math.floor(dailyTraffic * gameState.reputation * (1 - locationConfig.competition/10));
-    
-    // Inventory & sales logic, simplified to one item
-    let revenue = 0;
-    let totalIngredientCosts = 0;
-    let servedCustomers = 0;
-
-    // The cost of supplies now includes the supplier cost
-    const costPerCup = supplierConfig.costPerCup + configs.supplyCosts.coffeeCup;
-
-    const cupsToSell = Math.min(customersToday, gameState.inventory.coffeeCups);
-    
-    if (cupsToSell > 0) {
-        servedCustomers = cupsToSell; 
-        revenue = (servedCustomers * gameState.menuPrices.coffee);
-        totalIngredientCosts = (servedCustomers * costPerCup); 
-    }
-
-    const dailyProfit = revenue - totalIngredientCosts;
-    gameState.money += dailyProfit;
-
-    // Update reputation
-    const qualityFactor = (equipmentConfig.quality + supplierConfig.qualityFactor) / 2;
-    const moraleFactor = gameState.baristas.reduce((sum, b) => sum + b.morale, 0) / (gameState.baristas.length || 1);
-    gameState.reputation = Math.max(0.1, Math.min(1.0, gameState.reputation + ((qualityFactor * moraleFactor) - gameState.reputation) * 0.01));
-    
-    // Log daily summary
-    addLog(`Served ${servedCustomers} customers. Daily revenue: $${revenue.toFixed(2)}. Profit: $${dailyProfit.toFixed(2)}.`, 'daily', dailyProfit > 0 ? 'text-green-600' : 'text-red-600');
-
-    // Update inventory
-    gameState.inventory.coffeeCups -= servedCustomers;
-
-    // Update customers
-    gameState.customers += Math.floor(servedCustomers * 0.1);
-
-    // Check for game over
-    if (gameState.money <= 0) {
-        endGame(`You ran out of money on day ${gameState.day}! Your coffee shop has closed.`);
-        return;
-    } else if (gameState.customers >= 100000) {
-        endGame(`Congratulations, ${gameState.playerName}! You reached 100,000 customers in ${gameState.day} days and built a coffee empire! You win!`);
-        return;
-    }
-
-    render(); 
-};
-
-const handleAction = (actionType) => {
-    switch (actionType) {
-        case 'market':
-            if (gameState.money >= 1000) {
-                gameState.money -= 1000;
-                gameState.customers += Math.floor(Math.random() * 1000) + 200;
-                addLog("You ran a marketing campaign and gained new customers!", 'daily', 'text-blue-600');
-            } else { showMessage("Not Enough Money", "You don't have enough cash for a marketing campaign."); }
-            break;
-        case 'hire':
-            if (gameState.money >= 2500) {
-                gameState.money -= 2500;
-                const newBarista = {
-                    id: gameState.baristas.length,
-                    morale: 1.0,
-                    salary: 2500,
-                    skills: { speed: Math.random() * 0.5 + 0.5, quality: Math.random() * 0.5 + 0.5 },
+        function renderLocationOptions() {
+            locationOptions.innerHTML = '';
+            locations.forEach(loc => {
+                const div = document.createElement('div');
+                div.className = `p-4 border rounded-lg cursor-pointer ${planningState.selectedLocation && planningState.selectedLocation.id === loc.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`;
+                div.innerHTML = `
+                    <h4 class="font-bold text-lg">${loc.name} ($${loc.rent}/day)</h4>
+                    <p class="text-sm text-gray-600">${loc.description}</p>
+                `;
+                div.onclick = () => {
+                    planningState.selectedLocation = loc;
+                    updateUpfrontCost();
+                    renderLocationOptions(); // Re-render to show selection
+                    nextStep1Btn.disabled = false;
                 };
-                gameState.baristas.push(newBarista);
-                addLog("You hired a new barista! Service speed should improve.", 'daily', 'text-indigo-600');
-            } else { showMessage("Not Enough Money", "You don't have enough cash to hire a new barista."); }
-            break;
-        case 'upgrade':
-            let upgradeCost;
-            let newEquipment;
-            if (gameState.equipment === 'basic') {
-                newEquipment = 'standard';
-                upgradeCost = configs.equipment.standard.cost - configs.equipment.basic.cost;
-            } else if (gameState.equipment === 'standard') {
-                newEquipment = 'pro';
-                upgradeCost = configs.equipment.pro.cost - configs.equipment.standard.cost;
-            } else {
-                showMessage("Maxed out", "Your equipment is already at the highest level.");
+                locationOptions.appendChild(div);
+            });
+        }
+
+        function renderMenuOptions() {
+            menuOptions.innerHTML = '';
+            menus.forEach(menu => {
+                const div = document.createElement('div');
+                div.className = `p-4 border rounded-lg cursor-pointer ${planningState.selectedMenu && planningState.selectedMenu.id === menu.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`;
+                div.innerHTML = `
+                    <h4 class="font-bold text-lg">${menu.name} ($${menu.cost} upfront)</h4>
+                    <p class="text-sm text-gray-600">${menu.description}</p>
+                `;
+                div.onclick = () => {
+                    planningState.selectedMenu = menu;
+                    updateUpfrontCost();
+                    renderMenuOptions(); // Re-render to show selection
+                    nextStep2Btn.disabled = false;
+                };
+                menuOptions.appendChild(div);
+            });
+        }
+
+        function handlePlanFinalization() {
+            if (!planningState.selectedLocation || !planningState.selectedMenu) {
+                showMessage("Selection Required", "Please choose a location and a menu.");
                 return;
             }
 
-            if (gameState.money >= upgradeCost) {
-                gameState.money -= upgradeCost;
-                gameState.equipment = newEquipment;
-                gameState.equipmentHealth = 1.0;
-                addLog(`You upgraded your equipment to ${configs.equipment[newEquipment].name}! It's brand new and working perfectly.`, 'event', 'text-yellow-600');
-            } else { showMessage("Not Enough Money", `You can't afford the ${configs.equipment[newEquipment].name} upgrade.`); }
-            break;
-        case 'take_loan':
-            if (!gameState.loan) {
-                gameState.loan = { amount: 10000, payment: 1000 };
-                gameState.money += 10000;
-                addLog('You took out a $10,000 loan with a $1,000 monthly payment.', 'event', 'text-green-600');
-            } else { showMessage("Already have a loan", "You can only have one loan at a time."); }
-            break;
-        case 'order_supplies':
-            const suppliesCost = configs.supplyOrderSize * configs.supplyCosts.coffeeCup;
-            if (gameState.money >= suppliesCost) {
-                gameState.money -= suppliesCost;
-                gameState.inventory.coffeeCups += configs.supplyOrderSize;
-                addLog(`Ordered ${configs.supplyOrderSize} coffee supplies for $${suppliesCost.toFixed(2)}.`, 'daily', 'text-green-600');
-            } else { showMessage("Not Enough Money", "You don't have enough cash to order more coffee supplies."); }
-            break;
-        case 'show_prices':
-            showPriceModal();
-            break;
-    }
-    render(); 
-};
+            const staffCount = parseInt(staffCountInput.value);
+            if (staffCount < 2 || staffCount > 10) {
+                showMessage("Invalid Staff Count", "Staff count must be between 2 and 10.");
+                return;
+            }
+            planningState.staffCount = staffCount;
 
-const handlePlanFinalization = () => {
-    if (!window.planningState.playerName) {
-        showMessage("Enter a Name", "Please enter your name to start the game.");
-        return;
-    }
-    const plan = window.planningState;
-    const equipmentConfig = configs.equipment[plan.equipment];
-    const upfrontCost = equipmentConfig.cost + plan.baristaCount * 2500 + plan.marketingBudget;
+            // No initial marketing budget to handle now.
 
-    if (50000 - upfrontCost < 0) {
-        showMessage("Not Enough Capital", "Your upfront costs exceed your starting capital. Please adjust your business plan.");
-        return;
-    }
+            let upfrontCost = planningState.selectedMenu.cost + (planningState.staffCount * 100);
 
-    const newBaristas = Array.from({ length: plan.baristaCount }, (_, i) => ({
-        id: i, morale: 1.0, salary: 2500,
-        skills: { speed: Math.random() * 0.5 + 0.5, quality: Math.random() * 0.5 + 0.5 },
-    }));
+            if (gameState.money < upfrontCost) {
+                showMessage("Not Enough Money", `You need $${upfrontCost} to start, but you only have $${gameState.money}. Adjust your plan.`);
+                return;
+            }
 
-    gameState = {
-        phase: 'running',
-        playerName: window.planningState.playerName,
-        money: 50000 - upfrontCost,
-        initialCapital: 50000,
-        day: 0, month: 0, customers: 0, reputation: 0.5, baristas: newBaristas,
-        equipment: plan.equipment, rent: configs.locations[plan.location].rent,
-        menuPrices: { coffee: 3 }, dailyLog: [], eventLog: [], isGameOver: false,
-        businessPlan: {
-            ...plan, upfrontCost,
-            locationConfig: configs.locations[plan.location],
-            equipmentConfig: equipmentConfig,
-            supplierConfig: configs.suppliers[plan.supplier],
-        },
-        inventory: { coffeeCups: 1000 },
-        loan: null, weather: 'Sunny', equipmentHealth: 1.0,
-    };
+            gameState.money -= upfrontCost;
+            gameState.businessPlan.location = planningState.selectedLocation;
+            gameState.businessPlan.menu = planningState.selectedMenu;
+            gameState.businessPlan.staffCount = planningState.staffCount;
+            gameState.staff = planningState.staffCount; // Set initial staff
+            gameState.customers = 0; // Reset customers for fresh start
+            gameState.day = 0; // Reset day to 0, it increments to 1 on first loop
 
-    gameInterval = setInterval(gameLoop, 1500); 
-    render(); 
-};
+            addLog("Your coffee shop is ready to open!", 'setup', 'text-green-600');
+            startDay(); // Start the first day of operations
+        }
 
-// --- Rendering functions ---
-const renderPlanningPhase = () => {
-    const plan = window.planningState;
-    let content = '';
+        function startDay() {
+            gameState.day++;
+            addLog(`--- Day ${gameState.day} ---`, 'daily', 'font-bold');
+            gameLoop();
+            renderOperationsPhase();
+            hideAllScreens();
+            operationsPhase.classList.remove('hidden');
+        }
 
-    // Helper to create input fields
-    const createInputField = (id, type, value, placeholder) => `
-        <input type="${type}" id="${id}" value="${value}"
-               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2"
-               placeholder="${placeholder}">
-    `;
+        function gameLoop() {
+            // Daily expenses (Rent + Staff Salaries)
+            const dailyRent = gameState.businessPlan.location.rent;
+            const staffSalaries = gameState.staff * 50; // $50 per staff per day
+            const dailyExpenses = dailyRent + staffSalaries;
 
-    // Helper to create select fields
-    const createSelectField = (id, value, options) => `
-        <select id="${id}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
-            ${options.map(opt => `<option value="${opt.value}" ${value === opt.value ? 'selected' : ''}>${opt.text}</option>`).join('')}
-        </select>
-    `;
+            gameState.money -= dailyExpenses;
+            addLog(`Daily expenses: Rent ($${dailyRent}), Staff Salaries ($${staffSalaries}). Total: -$${dailyExpenses}.`, 'daily');
 
-    // Helper to create buttons
-    const createButton = (id, text, className = "") => `
-        <button id="${id}" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 ${className}">
-            ${text}
-        </button>
-    `;
+            // Customer generation logic
+            const baseTraffic = (gameState.customers === 0 ? 50 : gameState.customers); // Fallback if 0 customers for very first day
+            let dailyTraffic = baseTraffic * gameState.businessPlan.location.customerTraffic;
 
-    if (plan.step === 0) {
-        content = `
-            <div class="space-y-6">
-                <label class="block text-lg font-medium text-gray-700">Your Name</label>
-                ${createInputField('playerNameInput', 'text', plan.playerName, 'e.g., Alex')}
-                ${createButton('nextStep0Btn', 'Next', 'w-full')}
-            </div>
-        `;
-    } else if (plan.step === 1) {
-        content = `
-            <div class="space-y-6">
-                <label class="block text-lg font-medium text-gray-700">Shop Name</label>
-                ${createInputField('shopNameInput', 'text', plan.shopName, 'e.g., The Daily Grind')}
-                <label class="block text-lg font-medium text-gray-700">Location</label>
-                ${createSelectField('locationSelect', plan.location, [
-                    { value: 'downtown', text: '$15,000 Rent/Month (High Traffic)' },
-                    { value: 'suburbs', text: '$5,000 Rent/Month (Moderate Traffic)' },
-                    { value: 'college', text: '$10,000 Rent/Month (High Student Traffic)' }
-                ])}
-                <div class="flex gap-4">
-                    ${createButton('prevStep1Btn', 'Previous', 'w-1/2')}
-                    ${createButton('nextStep1Btn', 'Next', 'w-1/2')}
-                </div>
-            </div>
-        `;
-    } else if (plan.step === 2) {
-        content = `
-            <div class="space-y-6">
-                <label class="block text-lg font-medium text-gray-700">Equipment</label>
-                ${createSelectField('equipmentSelect', plan.equipment, [
-                    { value: 'basic', text: '$10,000 (Slow, Low Quality)' },
-                    { value: 'standard', text: '$25,000 (Average Speed, Good Quality)' },
-                    { value: 'pro', text: '$40,000 (Fast, High Quality)' }
-                ])}
-                <label class="block text-lg font-medium text-gray-700">Coffee Bean Supplier</label>
-                ${createSelectField('supplierSelect', plan.supplier, [
-                    { value: 'budget', text: 'Budget Beans ($1.00 per cup, low quality)' },
-                    { value: 'premium', text: 'Premium Beans ($2.00 per cup, good quality)' },
-                    { value: 'gourmet', text: 'Gourmet Beans ($3.00 per cup, high quality)' }
-                ])}
-                <div class="flex gap-4">
-                    ${createButton('prevStep2Btn', 'Previous', 'w-1/2')}
-                    ${createButton('nextStep2Btn', 'Next', 'w-1/2')}
-                </div>
-            </div>
-        `;
-    } else if (plan.step === 3) {
-        content = `
-            <div class="space-y-6">
-                <label class="block text-lg font-medium text-gray-700">Initial Baristas</label>
-                ${createInputField('baristaCountInput', 'number', plan.baristaCount, '')}
-                <p class="text-sm text-gray-500">Each costs $2,500 upfront and in monthly salary.</p>
-                <label class="block text-lg font-medium text-gray-700">Initial Marketing Budget</label>
-                ${createInputField('marketingBudgetInput', 'number', plan.marketingBudget, '')}
-                <p class="text-sm text-gray-500">One-time spend to get the word out on opening day.</p>
-                <div class="flex gap-4">
-                    ${createButton('prevStep3Btn', 'Previous', 'w-1/2')}
-                    ${createButton('nextStep3Btn', 'Next', 'w-1/2')}
-                </div>
-            </div>
-        `;
-    } else if (plan.step === 4) {
-        const upfrontCost = configs.equipment[plan.equipment].cost + plan.baristaCount * 2500 + plan.marketingBudget;
-        const startingCash = 50000 - upfrontCost;
-        content = `
-            <div class="space-y-6">
-                <h3 class="text-xl font-bold text-gray-700 text-center">Finalize Your Plan</h3>
-                <div class="bg-gray-50 rounded-xl p-6 shadow-inner space-y-3">
-                    <p><span>Player Name:</span> ${plan.playerName}</p>
-                    <p><span>Shop Name:</span> ${plan.shopName}</p>
-                    <p><span>Location:</span> ${configs.locations[plan.location].name}</p>
-                    <p><span>Equipment:</span> ${configs.equipment[plan.equipment].name}</p>
-                    <p><span>Supplier:</span> ${configs.suppliers[plan.supplier].name}</p>
-                    <p><span>Baristas:</span> ${plan.baristaCount}</p>
-                    <p><span>Initial Marketing:</span> $${plan.marketingBudget.toLocaleString()}</p>
-                    <p class="font-bold"><span>Upfront Cost:</span> $${upfrontCost.toLocaleString()}</p>
-                    <p class="font-bold"><span>Starting Cash:</span> $${startingCash.toLocaleString()}</p>
-                </div>
-                <div class="flex gap-4">
-                    ${createButton('prevStep4Btn', 'Previous', 'w-1/2')}
-                    ${createButton('openBusinessBtn', 'Open for Business!', 'w-1/2')}
-                </div>
-            </div>
-        `;
-    }
+            // Adjust traffic based on reputation
+            dailyTraffic *= (gameState.reputation / 100);
 
-    document.getElementById('game-content').innerHTML = `
-        <div class="flex flex-col gap-6">
-            <h2 class="text-2xl font-semibold text-gray-700 text-center mb-4">Phase 1: Build Your Business Plan</h2>
-            <div class="flex justify-center items-center gap-2 mb-6">
-                ${[0, 1, 2, 3, 4].map(step => `<div class="w-4 h-4 rounded-full step-indicator ${window.planningState.step === step ? 'bg-indigo-500' : window.planningState.step > step ? 'bg-green-500' : 'bg-gray-300'}"></div>`).join('')}
-            </div>
-            ${content}
-        </div>
-    `;
+            // Adjust traffic based on competition (higher competition = lower traffic)
+            dailyTraffic *= (1 - (gameState.businessPlan.location.competition / 10)); // Competition is 1-10
 
-    // --- Attach Event Listeners AFTER HTML is in the DOM ---
-    if (plan.step === 0) {
-        document.getElementById('playerNameInput')?.addEventListener('input', (e) => {
-            // REMOVED render() here to fix input focus issue
-            window.planningState.playerName = e.target.value;
+            // Adjust traffic based on menu quality
+            dailyTraffic *= gameState.businessPlan.menu.quality;
+
+            // Reduce customers if machine health is low
+            if (gameState.machineHealth < 25) {
+                dailyTraffic *= 0.5; // Halve traffic if machine health is very low
+                addLog("Coffee machine is severely broken, losing customers!", 'daily', 'text-red-500');
+            } else if (gameState.machineHealth < 50) {
+                dailyTraffic *= 0.8; // 20% reduction
+                addLog("Coffee machine needs attention, customer traffic slightly reduced.", 'daily', 'text-orange-500');
+            }
+
+            dailyTraffic = Math.max(0, Math.floor(dailyTraffic)); // Ensure non-negative integer
+
+            // Simulate customer serving (simplified: everyone who visits buys)
+            let customersServedToday = Math.min(dailyTraffic, gameState.staff * 100); // Staff can serve up to 100 customers each
+            addLog(`Attempting to serve ${dailyTraffic} customers. Staff can serve ${gameState.staff * 100}.`, 'debug');
+
+            if (customersServedToday < dailyTraffic) {
+                addLog(`You could only serve ${customersServedToday} customers due to staff limits or machine issues!`, 'daily', 'text-orange-500');
+            } else {
+                addLog(`You served ${customersServedToday} customers today!`, 'daily', 'text-green-500');
+            }
+
+            // Money earned
+            const moneyEarned = customersServedToday * 5; // $5 per customer
+            gameState.money += moneyEarned;
+            addLog(`Earned $${moneyEarned} from sales.`, 'daily', 'text-green-600');
+
+            // Update total customers served
+            gameState.totalCustomersServed += customersServedToday;
+
+            // Reputation changes
+            let reputationChange = 0;
+            if (customersServedToday > 0) {
+                // If more customers were attempted to serve than served (due to staff/machine limits)
+                if (customersServedToday < dailyTraffic) {
+                    reputationChange -= 2; // Lose reputation for poor service
+                } else {
+                    reputationChange += 1; // Gain reputation for good service
+                }
+            } else { // No customers served
+                reputationChange -= 5; // Lose reputation for no business
+            }
+
+            // Factor in menu quality to reputation change
+            reputationChange += (gameState.businessPlan.menu.quality - 1) * 2; // e.g., quality 1.2 gives +0.4, 0.8 gives -0.4
+
+            // Random events (e.g., machine wear, reputation fluctuation)
+            if (Math.random() < 0.2) { // 20% chance of machine wear or slight reputation change
+                gameState.machineHealth -= Math.floor(Math.random() * 10) + 5; // Lose 5-15 health
+                addLog("Coffee machine shows signs of wear and tear.", 'daily', 'text-red-400');
+            }
+            gameState.machineHealth = Math.max(0, gameState.machineHealth); // Machine health can't go below 0
+
+            gameState.reputation = Math.max(0, Math.min(100, gameState.reputation + reputationChange));
+            addLog(`Reputation changed by ${reputationChange}. Current Reputation: ${gameState.reputation}/100.`, 'daily');
+
+            // Customer base growth/shrinkage
+            if (gameState.reputation > 70 && customersServedToday > 50) {
+                gameState.customers = Math.floor(gameState.customers * 1.05) + Math.floor(customersServedToday * 0.1); // Grow customers
+                addLog("Customers growing due to good reputation and service!", 'daily', 'text-green-600');
+            } else if (gameState.reputation < 30) {
+                gameState.customers = Math.floor(gameState.customers * 0.9); // Lose customers
+                addLog("Customers leaving due to poor reputation!", 'daily', 'text-red-600');
+            } else {
+                // Keep customers relatively stable, or slight growth if doing okay
+                gameState.customers += Math.floor(customersServedToday * 0.02); // Small organic growth
+            }
+            gameState.customers = Math.max(0, gameState.customers); // Customers can't go below 0
+
+            // Check for game over conditions
+            if (gameState.money < 0 && gameState.day > 1) { // Allow negative money on day 1 if starting with just enough
+                endGame("You ran out of money and couldn't pay your bills!");
+                return;
+            }
+            if (gameState.machineHealth === 0 && gameState.day > 1) {
+                endGame("Your coffee machine broke down completely!");
+                return;
+            }
+            if (gameState.reputation === 0 && gameState.day > 1) {
+                 endGame("Your reputation plummeted, and customers abandoned your shop!");
+                 return;
+            }
+            if (gameState.customers === 0 && gameState.day > 1 && gameState.money < 1000) { // If no customers AND no money to market
+                endGame("You have no customers left and no money to bring them back!");
+                return;
+            }
+
+            updateUI();
+        }
+
+        function updateUI() {
+            moneyDisplay.textContent = gameState.money.toFixed(0);
+            dayCounterDisplay.textContent = gameState.day;
+            customersDisplay.textContent = gameState.customers.toFixed(0);
+            reputationDisplay.textContent = gameState.reputation.toFixed(0);
+            staffDisplay.textContent = gameState.staff;
+
+            // Machine Health Bar
+            const healthPercentage = gameState.machineHealth;
+            machineHealthBar.style.width = `${healthPercentage}%`;
+            if (healthPercentage > 75) {
+                machineHealthBar.className = 'bg-green-500 h-4 rounded-full progress-bar';
+            } else if (healthPercentage > 50) {
+                machineHealthBar.className = 'bg-lime-500 h-4 rounded-full progress-bar';
+            } else if (healthPercentage > 25) {
+                machineHealthBar.className = 'bg-orange-500 h-4 rounded-full progress-bar';
+            } else {
+                machineHealthBar.className = 'bg-red-500 h-4 rounded-full progress-bar';
+            }
+            machineHealthText.textContent = `${healthPercentage.toFixed(0)}%`;
+
+            // Update action button states
+            actionMarketBtn.disabled = gameState.money < serviceCosts.market;
+            actionTrainBtn.disabled = gameState.money < (serviceCosts.train * gameState.staff); // Training cost based on staff count
+            actionRefurbishBtn.disabled = gameState.money < serviceCosts.refurbish;
+            actionRepairBtn.disabled = gameState.money < serviceCosts.repair;
+            actionHireBtn.disabled = gameState.money < serviceCosts.hire || gameState.staff >= 10;
+            actionFireBtn.disabled = gameState.staff <= 2;
+
+        }
+
+        function addLog(message, type = 'general', className = '') {
+            const logEntry = { message, type, className, day: gameState.day };
+            gameState.logs.push(logEntry);
+
+            const p = document.createElement('p');
+            p.textContent = `[Day ${gameState.day}] ${message}`;
+            p.className = `mb-1 ${className}`;
+            dailyLog.appendChild(p);
+            dailyLog.scrollTop = dailyLog.scrollHeight; // Auto-scroll to bottom
+        }
+
+        function showMessage(title, message) {
+            alert(`${title}\n\n${message}`); // Simple alert for now
+        }
+
+        function renderOperationsPhase() {
+            // Clear previous logs
+            dailyLog.innerHTML = '';
+            // Re-add logs up to current day
+            gameState.logs.filter(log => log.day <= gameState.day).forEach(logEntry => {
+                const p = document.createElement('p');
+                p.textContent = `[Day ${logEntry.day}] ${logEntry.message}`;
+                p.className = `mb-1 ${logEntry.className}`;
+                dailyLog.appendChild(p);
+            });
+            dailyLog.scrollTop = dailyLog.scrollHeight; // Auto-scroll to bottom
+
+            updateUI();
+        }
+
+        function endGame(reason) {
+            clearInterval(gameInterval); // Stop the game loop
+            gameOverReason.textContent = reason;
+            finalDaysDisplay.textContent = gameState.day;
+            finalMoneyDisplay.textContent = gameState.money.toFixed(0);
+            finalCustomersServedDisplay.textContent = gameState.totalCustomersServed.toFixed(0);
+            hideAllScreens();
+            gameOverScreen.classList.remove('hidden');
+            saveHighScore(gameState.day, gameState.totalCustomersServed);
+            fetchHighScores();
+        }
+
+        function hideAllScreens() {
+            startScreen.classList.add('hidden');
+            planningPhase.classList.add('hidden');
+            operationsPhase.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+        }
+
+        // --- Firebase High Score Functions ---
+        const highScoresCollection = db.collection(`artifacts/${firebaseConfig.appId}/public/data/highScores`);
+
+        async function saveHighScore(daysSurvived, customersServed) {
+            if (!currentUserId) {
+                console.warn("User not authenticated, skipping high score save.");
+                addLog("Could not save high score: Not authenticated.", 'error', 'text-red-500');
+                return;
+            }
+
+            const playerName = prompt("Game Over! Enter your name for the high score list:");
+            if (!playerName) {
+                addLog("High score not saved (no name entered).", 'error', 'text-red-500');
+                return;
+            }
+
+            try {
+                await highScoresCollection.add({
+                    playerName: playerName,
+                    days: daysSurvived,
+                    customers: customersServed,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    userId: currentUserId, // Store user ID
+                });
+                addLog("High score saved successfully!", 'system', 'text-green-700');
+                fetchHighScores(); // Refresh high scores
+            } catch (error) {
+                console.error("Error saving high score:", error);
+                addLog(`Error saving high score: ${error.message}`, 'error', 'text-red-500');
+            }
+        }
+
+        async function fetchHighScores() {
+            highScoresList.innerHTML = '<p class="text-gray-500">Loading high scores...</p>';
+            try {
+                // Order by days (descending), then customers (descending), then player name (ascending)
+                const snapshot = await highScoresCollection.orderBy('days', 'desc').orderBy('customers', 'desc').orderBy('playerName', 'asc').limit(10).get();
+                if (snapshot.empty) {
+                    highScoresList.innerHTML = '<p class="text-gray-600">No high scores yet!</p>';
+                    return;
+                }
+
+                const ul = document.createElement('ul');
+                ul.className = 'list-disc list-inside space-y-1';
+                snapshot.forEach((doc, index) => {
+                    const data = doc.data();
+                    const li = document.createElement('li');
+                    li.textContent = `${index + 1}. ${data.playerName}: ${data.days} days, ${data.customers} customers`;
+                    ul.appendChild(li);
+                });
+                highScoresList.innerHTML = '';
+                highScoresList.appendChild(ul);
+            } catch (error) {
+                console.error("Error fetching high scores:", error);
+                highScoresList.innerHTML = `<p class="text-red-500">Error loading high scores: ${error.message}</p>`;
+            }
+        }
+
+        // --- Event Listeners ---
+        startGameBtn.addEventListener('click', initializeGame);
+        restartGameBtn.addEventListener('click', initializeGame);
+
+        nextStep1Btn.addEventListener('click', () => renderPlanningPhase(2));
+        nextStep2Btn.addEventListener('click', () => renderPlanningPhase(3));
+        nextStep3Btn.addEventListener('click', handlePlanFinalization);
+
+        staffCountInput.addEventListener('input', () => {
+            let val = parseInt(staffCountInput.value);
+            if (isNaN(val) || val < 2) val = 2;
+            if (val > 10) val = 10;
+            planningState.staffCount = val;
+            staffCountInput.value = val;
+            updateUpfrontCost();
         });
-        document.getElementById('nextStep0Btn')?.addEventListener('click', () => {
-            window.planningState.step = 1;
-            render();
-        });
-    } else if (plan.step === 1) {
-        document.getElementById('shopNameInput')?.addEventListener('input', (e) => {
-            // REMOVED render() here
-            window.planningState.shopName = e.target.value;
-        });
-        document.getElementById('locationSelect')?.addEventListener('change', (e) => {
-            window.planningState.location = e.target.value;
-            render();
-        });
-        document.getElementById('prevStep1Btn')?.addEventListener('click', () => {
-            window.planningState.step = 0;
-            render();
-        });
-        document.getElementById('nextStep1Btn')?.addEventListener('click', () => {
-            window.planningState.step = 2;
-            render();
-        });
-    } else if (plan.step === 2) {
-        document.getElementById('equipmentSelect')?.addEventListener('change', (e) => {
-            window.planningState.equipment = e.target.value;
-            render();
-        });
-        document.getElementById('supplierSelect')?.addEventListener('change', (e) => {
-            window.planningState.supplier = e.target.value;
-            render();
-        });
-        document.getElementById('prevStep2Btn')?.addEventListener('click', () => {
-            window.planningState.step = 1;
-            render();
-        });
-        document.getElementById('nextStep2Btn')?.addEventListener('click', () => {
-            window.planningState.step = 3;
-            render();
-        });
-    } else if (plan.step === 3) {
-        document.getElementById('baristaCountInput')?.addEventListener('input', (e) => {
-            // REMOVED render() here
-            window.planningState.baristaCount = parseInt(e.target.value) || 0;
-        });
-        document.getElementById('marketingBudgetInput')?.addEventListener('input', (e) => {
-            // REMOVED render() here
-            window.planningState.marketingBudget = parseInt(e.target.value) || 0;
-        });
-        document.getElementById('prevStep3Btn')?.addEventListener('click', () => {
-            window.planningState.step = 2;
-            render();
-        });
-        document.getElementById('nextStep3Btn')?.addEventListener('click', () => {
-            window.planningState.step = 4;
-            render();
-        });
-    } else if (plan.step === 4) {
-        document.getElementById('prevStep4Btn')?.addEventListener('click', () => {
-            window.planningState.step = 3;
-            render();
-        });
-        document.getElementById('openBusinessBtn')?.addEventListener('click', handlePlanFinalization);
-    }
-};
 
-const renderRunningPhase = () => {
-    let nextUpgradeText = '';
-    let nextUpgradeCost = 0;
-    let isUpgradeAvailable = false;
-    
-    if (gameState.equipment === 'basic') {
-        nextUpgradeText = `Upgrade to Standard ($${(configs.equipment.standard.cost - configs.equipment.basic.cost).toLocaleString()})`;
-        nextUpgradeCost = configs.equipment.standard.cost - configs.equipment.basic.cost;
-        isUpgradeAvailable = true;
-    } else if (gameState.equipment === 'standard') {
-        nextUpgradeText = `Upgrade to Pro ($${(configs.equipment.pro.cost - configs.equipment.standard.cost).toLocaleString()})`;
-        nextUpgradeCost = configs.equipment.pro.cost - configs.equipment.standard.cost;
-        isUpgradeAvailable = true;
-    } else {
-        nextUpgradeText = 'Max Equipment Level Reached';
-        isUpgradeAvailable = false;
-    }
+        // Event listeners for operations actions
+        actionMarketBtn.addEventListener('click', () => {
+            if (gameState.money >= serviceCosts.market) {
+                gameState.money -= serviceCosts.market;
+                gameState.customers += Math.floor(Math.random() * 1000) + 200; // Directly adds customers
+                addLog(`You spent $${serviceCosts.market} on a marketing campaign and gained new customers!`, 'action', 'text-blue-600');
+                updateUI();
+            } else {
+                showMessage("Not Enough Money", `You need $${serviceCosts.market} for a marketing campaign.`);
+            }
+        });
 
-    const dailyLogHTML = gameState.dailyLog.map((entry, index) => `<div class="${entry.color}">${entry.message}</div>`).join('');
-    const eventLogHTML = gameState.eventLog.length > 0 ? 
-        gameState.eventLog.map((entry, index) => `<div class="${entry.color}">${entry.message}</div>`).join('') : 
-        '<div>No special events yet.</div>';
-    
-    document.getElementById('game-content').innerHTML = `
-        <div class="flex flex-col lg:flex-row gap-8">
-            <div class="lg:w-2/3 flex flex-col gap-4">
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div class="bg-green-100 text-green-800 p-4 rounded-xl shadow-md text-center"> 
-                        <div class="font-bold text-lg">Cash</div> 
-                        <div class="text-2xl font-semibold">$${gameState.money.toLocaleString()}</div>
-                    </div>
-                    <div class="bg-blue-100 text-blue-800 p-4 rounded-xl shadow-md text-center flex flex-col justify-between"> 
-                        <div>
-                            <div class="font-bold text-lg">Customers</div>
-                            <div class="text-2xl font-semibold">${gameState.customers.toLocaleString()}</div>
-                        </div>
-                        <button id="marketBtn" class="mt-2 px-3 py-1 text-sm bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl transition duration-300 ${gameState.money < 1000 ? 'opacity-50 cursor-not-allowed' : ''}">
-                            Marketing ($1,000)
-                        </button>
-                    </div>
-                    <div class="bg-yellow-100 text-yellow-800 p-4 rounded-xl shadow-md text-center"> 
-                        <div class="font-bold text-lg">Day</div> 
-                        <div class="text-2xl font-semibold">${gameState.day}</div>
-                    </div>
-                    <div class="bg-purple-100 text-purple-800 p-4 rounded-xl shadow-md text-center"> 
-                        <div class="font-bold text-lg">Reputation</div> 
-                        <div class="text-2xl font-semibold">${(gameState.reputation * 100).toFixed(1)}%</div>
-                    </div>
-                </div>
+        actionTrainBtn.addEventListener('click', () => {
+            const cost = serviceCosts.train * gameState.staff;
+            if (gameState.money >= cost) {
+                gameState.money -= cost;
+                gameState.reputation = Math.min(100, gameState.reputation + 10);
+                addLog(`You spent $${cost} training your staff. Reputation increased!`, 'action', 'text-blue-600');
+                updateUI();
+            } else {
+                showMessage("Not Enough Money", `You need $${cost} to train your ${gameState.staff} staff.`);
+            }
+        });
 
-                <div class="bg-white p-6 rounded-xl shadow-md flex-grow">
-                    <h3 class="text-2xl font-bold text-gray-800 mb-4">${gameState.businessPlan.shopName} Status</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
-                        <p><strong>Location:</strong> ${configs.locations[gameState.businessPlan.location].name}</p>
-                        <p><strong>Equipment:</strong> ${configs.equipment[gameState.equipment].name} (${(gameState.equipmentHealth * 100).toFixed(0)}% Health)</p>
-                        <p><strong>Baristas:</strong> ${gameState.baristas.length}</p>
-                        <p><strong>Coffee Price:</strong> $${gameState.menuPrices.coffee.toFixed(2)}</p>
-                        <p><strong>Inventory:</strong> ${gameState.inventory.coffeeCups} cups</p>
-                        <p><strong>Weather:</strong> ${gameState.weather}</p>
-                        <p><strong>Monthly Rent:</strong> $${gameState.rent.toLocaleString()}</p>
-                        ${gameState.loan ? `<p><strong>Loan Payment:</strong> $${gameState.loan.payment.toLocaleString()} / month</p>` : ''}
-                    </div>
-                </div>
+        actionRefurbishBtn.addEventListener('click', () => {
+            if (gameState.money >= serviceCosts.refurbish) {
+                gameState.money -= serviceCosts.refurbish;
+                gameState.reputation = Math.min(100, gameState.reputation + 15);
+                gameState.machineHealth = Math.min(100, gameState.machineHealth + 20); // Minor health boost
+                addLog(`You spent $${serviceCosts.refurbish} refurbishing your shop. Reputation and machine health improved!`, 'action', 'text-blue-600');
+                updateUI();
+            } else {
+                showMessage("Not Enough Money", `You need $${serviceCosts.refurbish} to refurbish your shop.`);
+            }
+        });
 
-                <div class="bg-white p-6 rounded-xl shadow-md">
-                    <h3 class="text-2xl font-bold text-gray-800 mb-4">Actions</h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <button id="hireBtn" class="bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 px-4 rounded-xl transition duration-300 ${gameState.money < 2500 ? 'opacity-50 cursor-not-allowed' : ''}">
-                            Hire Barista ($2,500)
-                        </button>
-                        <button id="upgradeBtn" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-xl transition duration-300 ${!isUpgradeAvailable || gameState.money < nextUpgradeCost ? 'opacity-50 cursor-not-allowed' : ''}">
-                            ${nextUpgradeText}
-                        </button>
-                        <button id="orderSuppliesBtn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-4 rounded-xl transition duration-300 ${gameState.money < (configs.supplyOrderSize * configs.supplyCosts.coffeeCup) ? 'opacity-50 cursor-not-allowed' : ''}">
-                            Order Supplies ($${(configs.supplyOrderSize * configs.supplyCosts.coffeeCup).toFixed(2)})
-                        </button>
-                        <button id="takeLoanBtn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-xl transition duration-300 ${gameState.loan ? 'opacity-50 cursor-not-allowed' : ''}">
-                            Take Loan ($10,000)
-                        </button>
-                        <button id="showPricesBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-xl transition duration-300">
-                            Adjust Prices
-                        </button>
-                    </div>
-                </div>
-            </div>
+        actionRepairBtn.addEventListener('click', () => {
+            if (gameState.money >= serviceCosts.repair) {
+                gameState.money -= serviceCosts.repair;
+                gameState.machineHealth = 100; // Fully repair
+                addLog(`You spent $${serviceCosts.repair} to repair your coffee machine. It's good as new!`, 'action', 'text-blue-600');
+                updateUI();
+            } else {
+                showMessage("Not Enough Money", `You need $${serviceCosts.repair} to repair your machine.`);
+            }
+        });
 
-            <div class="lg:w-1/3 flex flex-col gap-4">
-                <div class="bg-white p-6 rounded-xl shadow-md flex-grow">
-                    <h3 class="text-2xl font-bold text-gray-800 mb-4">Daily Log</h3>
-                    <div class="space-y-2 text-sm max-h-60 overflow-y-auto">
-                        ${dailyLogHTML || '<div class="text-gray-500">No daily events yet.</div>'}
-                    </div>
-                </div>
+        actionHireBtn.addEventListener('click', () => {
+            if (gameState.staff < 10) {
+                if (gameState.money >= serviceCosts.hire) {
+                    gameState.money -= serviceCosts.hire; // Upfront hiring cost
+                    gameState.staff++;
+                    addLog(`You hired a new staff member for $${serviceCosts.hire} upfront. Daily salary is $50.`, 'action', 'text-blue-600');
+                    updateUI();
+                } else {
+                    showMessage("Not Enough Money", `You need $${serviceCosts.hire} to hire new staff.`);
+                }
+            } else {
+                showMessage("Staff Limit Reached", "You can't hire more than 10 staff members.");
+            }
+        });
 
-                <div class="bg-white p-6 rounded-xl shadow-md flex-grow">
-                    <h3 class="text-2xl font-bold text-gray-800 mb-4">Special Events</h3>
-                    <div class="space-y-2 text-sm max-h-60 overflow-y-auto">
-                        ${eventLogHTML}
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
+        actionFireBtn.addEventListener('click', () => {
+            if (gameState.staff > 2) {
+                gameState.staff--;
+                gameState.reputation = Math.max(0, gameState.reputation - 5); // Firing staff can hurt reputation
+                addLog("You fired a staff member. Reputation slightly decreased.", 'action', 'text-orange-500');
+                updateUI();
+            } else {
+                showMessage("Staff Minimum Reached", "You must have at least 2 staff members.");
+            }
+        });
 
-    // Attach event listeners for game actions after content is rendered
-    document.getElementById('marketBtn')?.addEventListener('click', () => handleAction('market'));
-    document.getElementById('hireBtn')?.addEventListener('click', () => handleAction('hire'));
-    document.getElementById('upgradeBtn')?.addEventListener('click', () => handleAction('upgrade'));
-    document.getElementById('orderSuppliesBtn')?.addEventListener('click', () => handleAction('order_supplies'));
-    document.getElementById('takeLoanBtn')?.addEventListener('click', () => handleAction('take_loan'));
-    document.getElementById('showPricesBtn')?.addEventListener('click', () => handleAction('show_prices'));
-};
+        endDayBtn.addEventListener('click', startDay);
 
-const renderGameOverPhase = () => {
-    document.getElementById('game-content').innerHTML = `
-        <div class="text-center space-y-6">
-            <h2 class="text-3xl font-bold text-gray-800">Game Over!</h2>
-            <button id="playAgainBtn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300">Play Again</button>
-        </div>
-    `;
-    document.getElementById('playAgainBtn')?.addEventListener('click', () => window.location.reload());
-};
-
-// The main render function (now truly global and responsible for controlling the UI flow)
-window.render = () => {
-    if (gameState.isGameOver) {
-        renderGameOverPhase();
-    } else if (gameState.phase === 'planning') {
-        renderPlanningPhase();
-    } else if (gameState.phase === 'running') {
-        renderRunningPhase();
-    } else {
-        window.planningState = {
-            step: 0,
-            playerName: '',
-            shopName: 'My Coffee Shop',
-            location: 'suburbs',
-            equipment: 'basic',
-            supplier: 'budget',
-            baristaCount: 1,
-            marketingBudget: 0,
-        };
-        gameState.phase = 'planning';
-        renderPlanningPhase();
-    }
-};
-
-// --- Initialize the Game ---
-document.addEventListener('DOMContentLoaded', () => {
-    setupFirestore();
-    render(); // Initial render
-});
-</script>
+        // Initial render when page loads
+        hideAllScreens();
+        startScreen.classList.remove('hidden');
+    </script>
 </body>
 </html>
