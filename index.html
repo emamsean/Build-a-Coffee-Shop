@@ -80,7 +80,8 @@
                 <h2 class="text-4xl text-center text-blue-600 mb-6">Planning Phase</h2>
                 <div class="text-center text-gray-700 text-lg mb-4">
                     <p>Current Step: <span id="planning-step-text"></span></p>
-                    <p>Upfront Costs: $<span id="upfront-cost">0</span></p>
+                    <p>Total Upfront Costs: $<span id="upfront-cost">0</span></p>
+                    <p>Starting Money: $<span id="starting-money-display">100,000</span></p>
                 </div>
 
                 <div id="planning-step-1" class="planning-step hidden section-box">
@@ -102,10 +103,11 @@
                 </div>
 
                 <div id="planning-step-3" class="planning-step hidden section-box">
-                    <h3 class="text-2xl font-bold mb-4">Step 3: Staffing & Marketing</h3>
+                    <h3 class="text-2xl font-bold mb-4">Step 3: Staffing</h3>
                     <div class="mb-4">
                         <label for="staffCountInput" class="block text-gray-700 text-sm font-bold mb-2">Number of Staff (2-10):</label>
                         <input type="number" id="staffCountInput" min="2" max="10" value="2" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                        <p class="text-sm text-gray-600">Initial hiring cost: $250 per staff. Daily salary: $200 per staff.</p>
                     </div>
                     <div class="flex justify-end mt-6">
                         <button id="next-step-3" class="btn-primary">Finalize Plan</button>
@@ -139,19 +141,19 @@
                                 <span class="tooltip-text">Boosts customer acquisition.</span>
                             </div>
                             <div class="tooltip-container w-full">
-                                <button id="action-train-btn" class="btn-primary w-full">Staff Training ($500 per staff)</button>
+                                <button id="action-train-btn" class="btn-primary w-full">Staff Training ($750 per staff)</button>
                                 <span class="tooltip-text">Increases staff efficiency and customer satisfaction.</span>
                             </div>
                             <div class="tooltip-container w-full">
-                                <button id="action-refurbish-btn" class="btn-primary w-full">Refurbish Shop ($2,000)</button>
+                                <button id="action-refurbish-btn" class="btn-primary w-full">Refurbish Shop ($5,000)</button>
                                 <span class="tooltip-text">Improves shop appeal and machine health.</span>
                             </div>
                             <div class="tooltip-container w-full">
-                                <button id="action-repair-btn" class="btn-primary w-full">Repair Machine ($1,500)</button>
+                                <button id="action-repair-btn" class="btn-primary w-full">Repair Machine ($2,500)</button>
                                 <span class="tooltip-text">Fully restores coffee machine health.</span>
                             </div>
                             <div class="tooltip-container w-full">
-                                <button id="action-hire-btn" class="btn-primary w-full">Hire Staff ($100 upfront, $50 daily)</button>
+                                <button id="action-hire-btn" class="btn-primary w-full">Hire Staff ($250 upfront, $200 daily salary)</button>
                                 <span class="tooltip-text">Increases staff count, improving service speed. Max 10 staff.</span>
                             </div>
                             <div class="tooltip-container w-full">
@@ -230,6 +232,7 @@
 
         const planningStepText = document.getElementById('planning-step-text');
         const upfrontCostDisplay = document.getElementById('upfront-cost');
+        const startingMoneyDisplay = document.getElementById('starting-money-display');
 
         const planningStep1 = document.getElementById('planning-step-1');
         const locationOptions = document.getElementById('location-options');
@@ -241,7 +244,6 @@
 
         const planningStep3 = document.getElementById('planning-step-3');
         const staffCountInput = document.getElementById('staffCountInput');
-        // const marketingBudgetInput = document.getElementById('marketingBudgetInput'); // Removed
         const nextStep3Btn = document.getElementById('next-step-3');
 
         const dayCounterDisplay = document.getElementById('day-counter');
@@ -275,34 +277,39 @@
         let planningStep = 0;
         let gameInterval; // To hold the setInterval ID
 
-        // Game Configuration Data
+        // Game Configuration Data (Seattle-specific pricing)
         const locations = [
-            { id: 'downtown', name: 'Downtown Core', rent: 2000, customerTraffic: 1.2, competition: 8, description: 'High foot traffic, but fierce competition.' },
-            { id: 'suburb', name: 'Quiet Suburbs', rent: 800, customerTraffic: 0.8, competition: 3, description: 'Lower rent, loyal local customers.' },
-            { id: 'university', name: 'University Campus', rent: 1500, customerTraffic: 1.5, competition: 6, description: 'Lots of students, but demanding tastes.' },
+            { id: 'downtown', name: 'Downtown Core', rent: 400, customerTraffic: 1.2, competition: 8, description: 'High foot traffic, but fierce competition. (~$12,000/month rent)' },
+            { id: 'suburb', name: 'Quiet Suburbs', rent: 150, customerTraffic: 0.8, competition: 3, description: 'Lower rent, loyal local customers. (~$4,500/month rent)' },
+            { id: 'university', name: 'University Campus', rent: 250, customerTraffic: 1.5, competition: 6, description: 'Lots of students, but demanding tastes. (~$7,500/month rent)' },
         ];
 
         const menus = [
-            { id: 'standard', name: 'Standard Menu', cost: 500, quality: 0.8, description: 'Basic coffee and pastries. Low cost, low quality perception.' },
-            { id: 'premium', name: 'Premium Menu', cost: 1500, quality: 1.2, description: 'Gourmet beans and artisanal treats. Higher cost, better quality.' },
-            { id: 'specialty', name: 'Specialty Menu', cost: 3000, quality: 1.5, description: 'Unique, exotic coffees and custom drinks. High cost, attracts connoisseurs.' },
+            { id: 'standard', name: 'Standard Menu', cost: 20000, quality: 0.8, description: 'Basic coffee & pastries. Upfront investment: $20,000' },
+            { id: 'premium', name: 'Premium Menu', cost: 50000, quality: 1.2, description: 'Gourmet beans & artisanal treats. Upfront investment: $50,000' },
+            { id: 'specialty', name: 'Specialty Menu', cost: 80000, quality: 1.5, description: 'Unique, exotic coffees & custom drinks. Upfront investment: $80,000' },
         ];
 
         const serviceCosts = {
             market: 1000,
-            train: 500,
-            refurbish: 2000,
-            repair: 1500,
-            hire: 100, // Upfront cost, daily cost handled in logic
+            train: 750, // Per staff
+            refurbish: 5000,
+            repair: 2500,
+            hire: 250, // Upfront per staff
             fire: 0
         };
+
+        const INITIAL_CAPITAL = 100000; // Increased starting money for Seattle realism
+        const DAILY_OVERHEAD = 100; // New: daily cost for utilities, etc.
+        const STAFF_DAILY_SALARY = 200; // New: daily salary per staff member
+        const REVENUE_PER_CUSTOMER = 7; // New: average revenue per customer
 
         // --- Core Game Logic ---
 
         function initializeGame() {
             gameState = {
                 day: 0,
-                money: 5000, // Starting money
+                money: INITIAL_CAPITAL, // Starting money
                 customers: 0,
                 reputation: 50, // Out of 100
                 staff: 0,
@@ -312,7 +319,6 @@
                     location: null,
                     menu: null,
                     staffCount: 0,
-                    // marketingBudget: 0, // Removed
                 },
                 logs: [], // Store daily log messages
             };
@@ -321,11 +327,11 @@
                 selectedLocation: null,
                 selectedMenu: null,
                 staffCount: 2,
-                // marketingBudget: 0, // Removed
             };
 
             planningStep = 0;
             updateUpfrontCost();
+            startingMoneyDisplay.textContent = INITIAL_CAPITAL.toLocaleString(); // Display initial capital
             renderPlanningPhase(1); // Start planning phase at step 1
             hideAllScreens();
             planningPhase.classList.remove('hidden');
@@ -336,9 +342,8 @@
             if (planningState.selectedMenu) {
                 cost += planningState.selectedMenu.cost;
             }
-            cost += planningState.staffCount * 100; // Initial hiring cost for staff
-            // cost += planningState.marketingBudget; // Removed
-            upfrontCostDisplay.textContent = cost;
+            cost += planningState.staffCount * serviceCosts.hire; // Initial hiring cost for staff
+            upfrontCostDisplay.textContent = cost.toLocaleString();
         }
 
         function renderPlanningPhase(step) {
@@ -357,7 +362,6 @@
             } else if (step === 3) {
                 planningStep3.classList.remove('hidden');
                 staffCountInput.value = planningState.staffCount;
-                // marketingBudgetInput.value = planningState.marketingBudget; // Removed
             }
         }
 
@@ -367,7 +371,7 @@
                 const div = document.createElement('div');
                 div.className = `p-4 border rounded-lg cursor-pointer ${planningState.selectedLocation && planningState.selectedLocation.id === loc.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`;
                 div.innerHTML = `
-                    <h4 class="font-bold text-lg">${loc.name} ($${loc.rent}/day)</h4>
+                    <h4 class="font-bold text-lg">${loc.name} ($${loc.rent.toLocaleString()}/day rent)</h4>
                     <p class="text-sm text-gray-600">${loc.description}</p>
                 `;
                 div.onclick = () => {
@@ -386,7 +390,7 @@
                 const div = document.createElement('div');
                 div.className = `p-4 border rounded-lg cursor-pointer ${planningState.selectedMenu && planningState.selectedMenu.id === menu.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`;
                 div.innerHTML = `
-                    <h4 class="font-bold text-lg">${menu.name} ($${menu.cost} upfront)</h4>
+                    <h4 class="font-bold text-lg">${menu.name}</h4>
                     <p class="text-sm text-gray-600">${menu.description}</p>
                 `;
                 div.onclick = () => {
@@ -412,16 +416,14 @@
             }
             planningState.staffCount = staffCount;
 
-            // No initial marketing budget to handle now.
+            let upfrontCost = planningState.selectedMenu.cost + (planningState.staffCount * serviceCosts.hire);
 
-            let upfrontCost = planningState.selectedMenu.cost + (planningState.staffCount * 100);
-
-            if (gameState.money < upfrontCost) {
-                showMessage("Not Enough Money", `You need $${upfrontCost} to start, but you only have $${gameState.money}. Adjust your plan.`);
+            if (INITIAL_CAPITAL < upfrontCost) {
+                showMessage("Not Enough Money", `You need $${upfrontCost.toLocaleString()} to start, but you only have $${INITIAL_CAPITAL.toLocaleString()}. Adjust your plan.`);
                 return;
             }
 
-            gameState.money -= upfrontCost;
+            gameState.money = INITIAL_CAPITAL - upfrontCost; // Deduct upfront cost from starting money
             gameState.businessPlan.location = planningState.selectedLocation;
             gameState.businessPlan.menu = planningState.selectedMenu;
             gameState.businessPlan.staffCount = planningState.staffCount;
@@ -443,16 +445,16 @@
         }
 
         function gameLoop() {
-            // Daily expenses (Rent + Staff Salaries)
+            // Daily expenses (Rent + Staff Salaries + Overhead)
             const dailyRent = gameState.businessPlan.location.rent;
-            const staffSalaries = gameState.staff * 50; // $50 per staff per day
-            const dailyExpenses = dailyRent + staffSalaries;
+            const staffSalaries = gameState.staff * STAFF_DAILY_SALARY;
+            const dailyExpenses = dailyRent + staffSalaries + DAILY_OVERHEAD; // Add daily overhead
 
             gameState.money -= dailyExpenses;
-            addLog(`Daily expenses: Rent ($${dailyRent}), Staff Salaries ($${staffSalaries}). Total: -$${dailyExpenses}.`, 'daily');
+            addLog(`Daily expenses: Rent ($${dailyRent.toLocaleString()}), Staff Salaries ($${staffSalaries.toLocaleString()}), Overhead ($${DAILY_OVERHEAD.toLocaleString()}). Total: -$${dailyExpenses.toLocaleString()}.`, 'daily');
 
             // Customer generation logic
-            const baseTraffic = (gameState.customers === 0 ? 50 : gameState.customers); // Fallback if 0 customers for very first day
+            const baseTraffic = (gameState.customers === 0 ? 100 : gameState.customers); // Default to 100 if no customers for very first day
             let dailyTraffic = baseTraffic * gameState.businessPlan.location.customerTraffic;
 
             // Adjust traffic based on reputation
@@ -486,9 +488,9 @@
             }
 
             // Money earned
-            const moneyEarned = customersServedToday * 5; // $5 per customer
+            const moneyEarned = customersServedToday * REVENUE_PER_CUSTOMER; // Revenue per customer
             gameState.money += moneyEarned;
-            addLog(`Earned $${moneyEarned} from sales.`, 'daily', 'text-green-600');
+            addLog(`Earned $${moneyEarned.toLocaleString()} from sales.`, 'daily', 'text-green-600');
 
             // Update total customers served
             gameState.totalCustomersServed += customersServedToday;
@@ -545,7 +547,7 @@
                  endGame("Your reputation plummeted, and customers abandoned your shop!");
                  return;
             }
-            if (gameState.customers === 0 && gameState.day > 1 && gameState.money < 1000) { // If no customers AND no money to market
+            if (gameState.customers === 0 && gameState.day > 1 && gameState.money < 5000) { // If no customers AND not enough money to market/recover
                 endGame("You have no customers left and no money to bring them back!");
                 return;
             }
@@ -554,9 +556,9 @@
         }
 
         function updateUI() {
-            moneyDisplay.textContent = gameState.money.toFixed(0);
+            moneyDisplay.textContent = gameState.money.toLocaleString();
             dayCounterDisplay.textContent = gameState.day;
-            customersDisplay.textContent = gameState.customers.toFixed(0);
+            customersDisplay.textContent = gameState.customers.toLocaleString();
             reputationDisplay.textContent = gameState.reputation.toFixed(0);
             staffDisplay.textContent = gameState.staff;
 
@@ -618,8 +620,8 @@
             clearInterval(gameInterval); // Stop the game loop
             gameOverReason.textContent = reason;
             finalDaysDisplay.textContent = gameState.day;
-            finalMoneyDisplay.textContent = gameState.money.toFixed(0);
-            finalCustomersServedDisplay.textContent = gameState.totalCustomersServed.toFixed(0);
+            finalMoneyDisplay.textContent = gameState.money.toLocaleString();
+            finalCustomersServedDisplay.textContent = gameState.totalCustomersServed.toLocaleString();
             hideAllScreens();
             gameOverScreen.classList.remove('hidden');
             saveHighScore(gameState.day, gameState.totalCustomersServed);
@@ -680,7 +682,7 @@
                 snapshot.forEach((doc, index) => {
                     const data = doc.data();
                     const li = document.createElement('li');
-                    li.textContent = `${index + 1}. ${data.playerName}: ${data.days} days, ${data.customers} customers`;
+                    li.textContent = `${index + 1}. ${data.playerName}: ${data.days} days, ${data.customers.toLocaleString()} customers`;
                     ul.appendChild(li);
                 });
                 highScoresList.innerHTML = '';
@@ -713,10 +715,10 @@
             if (gameState.money >= serviceCosts.market) {
                 gameState.money -= serviceCosts.market;
                 gameState.customers += Math.floor(Math.random() * 1000) + 200; // Directly adds customers
-                addLog(`You spent $${serviceCosts.market} on a marketing campaign and gained new customers!`, 'action', 'text-blue-600');
+                addLog(`You spent $${serviceCosts.market.toLocaleString()} on a marketing campaign and gained new customers!`, 'action', 'text-blue-600');
                 updateUI();
             } else {
-                showMessage("Not Enough Money", `You need $${serviceCosts.market} for a marketing campaign.`);
+                showMessage("Not Enough Money", `You need $${serviceCosts.market.toLocaleString()} for a marketing campaign.`);
             }
         });
 
@@ -725,10 +727,10 @@
             if (gameState.money >= cost) {
                 gameState.money -= cost;
                 gameState.reputation = Math.min(100, gameState.reputation + 10);
-                addLog(`You spent $${cost} training your staff. Reputation increased!`, 'action', 'text-blue-600');
+                addLog(`You spent $${cost.toLocaleString()} training your staff. Reputation increased!`, 'action', 'text-blue-600');
                 updateUI();
             } else {
-                showMessage("Not Enough Money", `You need $${cost} to train your ${gameState.staff} staff.`);
+                showMessage("Not Enough Money", `You need $${cost.toLocaleString()} to train your ${gameState.staff} staff.`);
             }
         });
 
@@ -737,10 +739,10 @@
                 gameState.money -= serviceCosts.refurbish;
                 gameState.reputation = Math.min(100, gameState.reputation + 15);
                 gameState.machineHealth = Math.min(100, gameState.machineHealth + 20); // Minor health boost
-                addLog(`You spent $${serviceCosts.refurbish} refurbishing your shop. Reputation and machine health improved!`, 'action', 'text-blue-600');
+                addLog(`You spent $${serviceCosts.refurbish.toLocaleString()} refurbishing your shop. Reputation and machine health improved!`, 'action', 'text-blue-600');
                 updateUI();
             } else {
-                showMessage("Not Enough Money", `You need $${serviceCosts.refurbish} to refurbish your shop.`);
+                showMessage("Not Enough Money", `You need $${serviceCosts.refurbish.toLocaleString()} to refurbish your shop.`);
             }
         });
 
@@ -748,10 +750,10 @@
             if (gameState.money >= serviceCosts.repair) {
                 gameState.money -= serviceCosts.repair;
                 gameState.machineHealth = 100; // Fully repair
-                addLog(`You spent $${serviceCosts.repair} to repair your coffee machine. It's good as new!`, 'action', 'text-blue-600');
+                addLog(`You spent $${serviceCosts.repair.toLocaleString()} to repair your coffee machine. It's good as new!`, 'action', 'text-blue-600');
                 updateUI();
             } else {
-                showMessage("Not Enough Money", `You need $${serviceCosts.repair} to repair your machine.`);
+                showMessage("Not Enough Money", `You need $${serviceCosts.repair.toLocaleString()} to repair your machine.`);
             }
         });
 
@@ -760,10 +762,10 @@
                 if (gameState.money >= serviceCosts.hire) {
                     gameState.money -= serviceCosts.hire; // Upfront hiring cost
                     gameState.staff++;
-                    addLog(`You hired a new staff member for $${serviceCosts.hire} upfront. Daily salary is $50.`, 'action', 'text-blue-600');
+                    addLog(`You hired a new staff member for $${serviceCosts.hire.toLocaleString()} upfront. Daily salary is $${STAFF_DAILY_SALARY.toLocaleString()}.`, 'action', 'text-blue-600');
                     updateUI();
                 } else {
-                    showMessage("Not Enough Money", `You need $${serviceCosts.hire} to hire new staff.`);
+                    showMessage("Not Enough Money", `You need $${serviceCosts.hire.toLocaleString()} to hire new staff.`);
                 }
             } else {
                 showMessage("Staff Limit Reached", "You can't hire more than 10 staff members.");
