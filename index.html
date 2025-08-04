@@ -122,7 +122,8 @@
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                     <div class="lg:col-span-2 section-box">
                         <h2 class="text-3xl text-blue-600 mb-4">Business Overview</h2>
-                        <p class="text-xl font-bold mb-2">Player: <span id="player-name-display"></span></p> <p class="text-xl font-bold mb-2">Day: <span id="day-counter">1</span></p>
+                        <p class="text-xl font-bold mb-2">Player: <span id="player-name-display"></span></p>
+                        <p class="text-xl font-bold mb-2">Day: <span id="day-counter">1</span></p>
                         <p class="text-xl font-bold mb-2">Money: $<span id="money-display">0</span></p>
                         <p class="text-xl font-bold mb-2">Customers: <span id="customers-display">0</span></p>
                         <p class="text-xl font-bold mb-2">Reputation: <span id="reputation-display">50</span>/100</p>
@@ -175,7 +176,8 @@
                                 <span class="tooltip-text">Reduces staff count, but can decrease reputation. Min 2 staff.</span>
                             </div>
                         </div>
-                        <button id="end-day-btn" class="btn-primary w-full mt-6 text-xl">End Day</button>
+                        <button id="end-day-btn" class="btn-primary w-full mt-6 text-xl">End Day Manually</button>
+                        <button id="toggle-auto-day-btn" class="btn-secondary w-full mt-2 text-xl">Start Auto Day (5s)</button>
                     </div>
                 </div>
 
@@ -233,7 +235,7 @@
             })
             .catch((error) => {
                 console.error("Firebase Auth Error:", error);
-                // addLog("Authentication failed. High scores might not be saved.", 'error', 'text-red-500'); // Log not visible at this stage
+                // No addLog here, as the log display isn't active yet
             });
 
 
@@ -263,7 +265,7 @@
         const backStep3Btn = document.getElementById('back-step-3');
         const nextStep3Btn = document.getElementById('next-step-3');
 
-        const playerNameDisplay = document.getElementById('player-name-display'); // New
+        const playerNameDisplay = document.getElementById('player-name-display');
         const dayCounterDisplay = document.getElementById('day-counter');
         const moneyDisplay = document.getElementById('money-display');
         const customersDisplay = document.getElementById('customers-display');
@@ -282,6 +284,7 @@
         const actionHireBtn = document.getElementById('action-hire-btn');
         const actionFireBtn = document.getElementById('action-fire-btn');
         const endDayBtn = document.getElementById('end-day-btn');
+        const toggleAutoDayBtn = document.getElementById('toggle-auto-day-btn'); // New
         const dailyLog = document.getElementById('daily-log');
 
         const gameOverReason = document.getElementById('game-over-reason');
@@ -292,11 +295,12 @@
         const restartGameBtn = document.getElementById('restart-game-btn');
 
 
-        // Game State
+        // Game State Variables
         let gameState = {};
         let planningState = {};
         let planningStep = 0;
-        let gameInterval; // To hold the setInterval ID
+        let gameIntervalId = null; // Changed to hold the setInterval ID
+        let isAutoDayRunning = false; // New flag for auto-day
 
         // Game Configuration Data (Seattle-specific pricing)
         const locations = [
@@ -325,18 +329,18 @@
         const DAILY_OVERHEAD = 100;
         const STAFF_DAILY_SALARY = 200;
         const REVENUE_PER_CUSTOMER = 7;
+        const AUTO_DAY_INTERVAL = 5000; // 5 seconds for automatic day progression
 
         // --- Core Game Logic ---
 
         function initializeGame() {
-            // Prompt for player name at the very beginning
             let playerName = prompt("Welcome, aspiring Coffee Tycoon! What's your name?");
             if (!playerName || playerName.trim() === '') {
-                playerName = "Anonymous Tycoon"; // Default name if no input
+                playerName = "Anonymous Tycoon";
             }
 
             gameState = {
-                playerName: playerName.trim(), // Store player's name
+                playerName: playerName.trim(),
                 day: 0,
                 money: INITIAL_CAPITAL,
                 customers: 0,
@@ -365,6 +369,9 @@
             renderPlanningPhase(1);
             hideAllScreens();
             planningPhase.classList.remove('hidden');
+
+            // Reset auto day button state
+            stopAutoDay(); // Ensure it's stopped and button is set to "Start Auto Day"
         }
 
         function updateUpfrontCost() {
@@ -446,7 +453,7 @@
             }
 
             const staffCount = parseInt(staffCountInput.value);
-            if (staffCount < 2 || staffCount > 10) {
+            if (isNaN(staffCount) || staffCount < 2 || staffCount > 10) {
                 showMessage("Invalid Staff Count", "Staff count must be between 2 and 10.");
                 return;
             }
@@ -465,10 +472,10 @@
             gameState.businessPlan.staffCount = planningState.staffCount;
             gameState.staff = planningState.staffCount;
             gameState.customers = 0;
-            gameState.day = 0;
+            gameState.day = 0; // Ensures day starts at 1 after first call to startDay()
 
             addLog("Your coffee shop is ready to open!", 'setup', 'text-green-600');
-            startDay();
+            startDay(); // Manually start the first day
         }
 
         function startDay() {
@@ -476,11 +483,10 @@
             addLog(`--- Day ${gameState.day} ---`, 'daily', 'font-bold');
             gameLoop();
             renderOperationsPhase();
-            hideAllScreens();
-            operationsPhase.classList.remove('hidden');
         }
 
         function gameLoop() {
+            // Daily expenses (Rent + Staff Salaries + Overhead)
             const dailyRent = gameState.businessPlan.location.rent;
             const staffSalaries = gameState.staff * STAFF_DAILY_SALARY;
             const dailyExpenses = dailyRent + staffSalaries + DAILY_OVERHEAD;
@@ -488,6 +494,7 @@
             gameState.money -= dailyExpenses;
             addLog(`Daily expenses: Rent ($${dailyRent.toLocaleString()}), Staff Salaries ($${staffSalaries.toLocaleString()}), Overhead ($${DAILY_OVERHEAD.toLocaleString()}). Total: -$${dailyExpenses.toLocaleString()}.`, 'daily');
 
+            // Customer generation logic
             const baseTraffic = (gameState.customers === 0 ? 100 : gameState.customers);
             let dailyTraffic = baseTraffic * gameState.businessPlan.location.customerTraffic;
 
@@ -522,15 +529,20 @@
                 addLog(`You served ${customersServedToday} customers today!`, 'daily', 'text-green-500');
             }
 
+            // Money earned
             const moneyEarned = customersServedToday * REVENUE_PER_CUSTOMER;
             gameState.money += moneyEarned;
             addLog(`Earned $${moneyEarned.toLocaleString()} from sales.`, 'daily', 'text-green-600');
 
+            // Update total customers served
             gameState.totalCustomersServed += customersServedToday;
 
+            // --- Daily Resource Consumption / Changes ---
+            // Supplies consumption
             gameState.supplies -= Math.ceil(customersServedToday / 10);
             gameState.supplies = Math.max(0, gameState.supplies);
 
+            // Reputation changes
             let reputationChange = 0;
             if (customersServedToday > 0) {
                 if (customersServedToday < dailyTraffic) {
@@ -553,6 +565,7 @@
             gameState.reputation = Math.max(0, Math.min(100, gameState.reputation + reputationChange));
             addLog(`Reputation changed by ${reputationChange}. Current Reputation: ${gameState.reputation}/100.`, 'daily');
 
+            // Customer base growth/shrinkage
             if (gameState.reputation > 70 && customersServedToday > 50 && gameState.supplies > 30) {
                 gameState.customers = Math.floor(gameState.customers * 1.05) + Math.floor(customersServedToday * 0.1);
                 addLog("Customers growing due to good reputation and service!", 'daily', 'text-green-600');
@@ -564,32 +577,36 @@
             }
             gameState.customers = Math.max(0, gameState.customers);
 
-            if (gameState.money < 0 && gameState.day > 1) {
-                endGame("You ran out of money and couldn't pay your bills!");
-                return;
-            }
-            if (gameState.machineHealth === 0 && gameState.day > 1) {
-                endGame("Your coffee machine broke down completely!");
-                return;
-            }
-            if (gameState.reputation === 0 && gameState.day > 1) {
-                 endGame("Your reputation plummeted, and customers abandoned your shop!");
-                 return;
-            }
-            if (gameState.customers === 0 && gameState.day > 1 && gameState.money < 5000) {
-                endGame("You have no customers left and no money to bring them back!");
-                return;
-            }
-            if (gameState.supplies === 0 && gameState.day > 1) {
-                endGame("You ran out of supplies and had to close your doors!");
-                return;
+            // Check for game over conditions
+            // Important: Only check for game over AFTER day 1
+            if (gameState.day > 1) {
+                if (gameState.money < 0) {
+                    endGame("You ran out of money and couldn't pay your bills!");
+                    return;
+                }
+                if (gameState.machineHealth <= 0) { // Changed to <= 0
+                    endGame("Your coffee machine broke down completely!");
+                    return;
+                }
+                if (gameState.reputation <= 0) { // Changed to <= 0
+                     endGame("Your reputation plummeted, and customers abandoned your shop!");
+                     return;
+                }
+                if (gameState.customers === 0 && gameState.money < 5000) {
+                    endGame("You have no customers left and no money to bring them back!");
+                    return;
+                }
+                if (gameState.supplies <= 0) { // Changed to <= 0
+                    endGame("You ran out of supplies and had to close your doors!");
+                    return;
+                }
             }
 
             updateUI();
         }
 
         function updateUI() {
-            playerNameDisplay.textContent = gameState.playerName; // Update player name display
+            playerNameDisplay.textContent = gameState.playerName;
             moneyDisplay.textContent = gameState.money.toLocaleString();
             dayCounterDisplay.textContent = gameState.day;
             customersDisplay.textContent = gameState.customers.toLocaleString();
@@ -631,6 +648,8 @@
             actionHireBtn.disabled = gameState.money < serviceCosts.hire || gameState.staff >= 10;
             actionFireBtn.disabled = gameState.staff <= 2;
 
+            // Enable/disable End Day button based on auto-day state
+            endDayBtn.disabled = isAutoDayRunning;
         }
 
         function addLog(message, type = 'general', className = '') {
@@ -649,27 +668,31 @@
         }
 
         function renderOperationsPhase() {
+            // Clear previous logs
             dailyLog.innerHTML = '';
-            gameState.logs.filter(log => log.day <= gameState.day).forEach(logEntry => {
+            // Re-add all logs up to current day
+            gameState.logs.forEach(logEntry => {
                 const p = document.createElement('p');
                 p.textContent = `[Day ${logEntry.day}] ${logEntry.message}`;
                 p.className = `mb-1 ${logEntry.className}`;
                 dailyLog.appendChild(p);
             });
-            dailyLog.scrollTop = dailyLog.scrollHeight;
+            dailyLog.scrollTop = dailyLog.scrollHeight; // Auto-scroll to bottom
 
-            updateUI();
+            hideAllScreens();
+            operationsPhase.classList.remove('hidden');
+            updateUI(); // Ensure UI is updated after showing operations phase
         }
 
         function endGame(reason) {
-            clearInterval(gameInterval);
+            stopAutoDay(); // Stop any auto-day progression
             gameOverReason.textContent = reason;
             finalDaysDisplay.textContent = gameState.day;
             finalMoneyDisplay.textContent = gameState.money.toLocaleString();
             finalCustomersServedDisplay.textContent = gameState.totalCustomersServed.toLocaleString();
             hideAllScreens();
             gameOverScreen.classList.remove('hidden');
-            saveHighScore(gameState.playerName, gameState.day, gameState.totalCustomersServed); // Pass player name
+            saveHighScore(gameState.playerName, gameState.day, gameState.totalCustomersServed);
             fetchHighScores();
         }
 
@@ -680,20 +703,46 @@
             gameOverScreen.classList.add('hidden');
         }
 
+        // --- Auto Day Progression Functions ---
+        function startAutoDay() {
+            if (gameIntervalId) { // Clear any existing interval to prevent multiple loops
+                clearInterval(gameIntervalId);
+            }
+            gameIntervalId = setInterval(startDay, AUTO_DAY_INTERVAL);
+            toggleAutoDayBtn.textContent = "Pause Auto Day";
+            toggleAutoDayBtn.classList.remove('btn-secondary');
+            toggleAutoDayBtn.classList.add('btn-primary');
+            endDayBtn.disabled = true; // Disable manual end day when auto is running
+            isAutoDayRunning = true;
+            addLog(`Game auto-advance started (every ${AUTO_DAY_INTERVAL / 1000} seconds).`, 'system', 'text-gray-700');
+        }
+
+        function stopAutoDay() {
+            if (gameIntervalId) {
+                clearInterval(gameIntervalId);
+                gameIntervalId = null;
+            }
+            toggleAutoDayBtn.textContent = `Start Auto Day (${AUTO_DAY_INTERVAL / 1000}s)`;
+            toggleAutoDayBtn.classList.remove('btn-primary');
+            toggleAutoDayBtn.classList.add('btn-secondary');
+            endDayBtn.disabled = false; // Enable manual end day when auto is stopped
+            isAutoDayRunning = false;
+            addLog("Game auto-advance paused.", 'system', 'text-gray-700');
+        }
+
         // --- Firebase High Score Functions ---
         const highScoresCollection = db.collection(`artifacts/${firebaseConfig.appId}/public/data/highScores`);
 
-        async function saveHighScore(playerName, daysSurvived, customersServed) { // Updated to accept playerName
+        async function saveHighScore(playerName, daysSurvived, customersServed) {
             if (!currentUserId) {
                 console.warn("User not authenticated, skipping high score save.");
                 addLog("Could not save high score: Not authenticated.", 'error', 'text-red-500');
                 return;
             }
 
-            // No longer prompt for name here, use the one from gameState
             try {
                 await highScoresCollection.add({
-                    playerName: playerName, // Use the already collected player name
+                    playerName: playerName,
                     days: daysSurvived,
                     customers: customersServed,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -840,7 +889,15 @@
             }
         });
 
-        endDayBtn.addEventListener('click', startDay);
+        endDayBtn.addEventListener('click', startDay); // Manual end day
+        toggleAutoDayBtn.addEventListener('click', () => { // Toggle auto day
+            if (isAutoDayRunning) {
+                stopAutoDay();
+            } else {
+                startAutoDay();
+            }
+        });
+
 
         // Initial render when page loads
         hideAllScreens();
