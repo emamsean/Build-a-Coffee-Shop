@@ -122,7 +122,7 @@
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                     <div class="lg:col-span-2 section-box">
                         <h2 class="text-3xl text-blue-600 mb-4">Business Overview</h2>
-                        <p class="text-xl font-bold mb-2">Day: <span id="day-counter">1</span></p>
+                        <p class="text-xl font-bold mb-2">Player: <span id="player-name-display"></span></p> <p class="text-xl font-bold mb-2">Day: <span id="day-counter">1</span></p>
                         <p class="text-xl font-bold mb-2">Money: $<span id="money-display">0</span></p>
                         <p class="text-xl font-bold mb-2">Customers: <span id="customers-display">0</span></p>
                         <p class="text-xl font-bold mb-2">Reputation: <span id="reputation-display">50</span>/100</p>
@@ -233,7 +233,7 @@
             })
             .catch((error) => {
                 console.error("Firebase Auth Error:", error);
-                addLog("Authentication failed. High scores might not be saved.", 'error', 'text-red-500');
+                // addLog("Authentication failed. High scores might not be saved.", 'error', 'text-red-500'); // Log not visible at this stage
             });
 
 
@@ -263,6 +263,7 @@
         const backStep3Btn = document.getElementById('back-step-3');
         const nextStep3Btn = document.getElementById('next-step-3');
 
+        const playerNameDisplay = document.getElementById('player-name-display'); // New
         const dayCounterDisplay = document.getElementById('day-counter');
         const moneyDisplay = document.getElementById('money-display');
         const customersDisplay = document.getElementById('customers-display');
@@ -270,14 +271,14 @@
         const staffDisplay = document.getElementById('staff-display');
         const machineHealthBar = document.getElementById('machine-health-bar');
         const machineHealthText = document.getElementById('machine-health-text');
-        const suppliesBar = document.getElementById('supplies-bar'); // New
-        const suppliesText = document.getElementById('supplies-text'); // New
+        const suppliesBar = document.getElementById('supplies-bar');
+        const suppliesText = document.getElementById('supplies-text');
 
         const actionMarketBtn = document.getElementById('action-market-btn');
         const actionTrainBtn = document.getElementById('action-train-btn');
         const actionRefurbishBtn = document.getElementById('action-refurbish-btn');
         const actionRepairBtn = document.getElementById('action-repair-btn');
-        const actionSuppliesBtn = document.getElementById('action-supplies-btn'); // New
+        const actionSuppliesBtn = document.getElementById('action-supplies-btn');
         const actionHireBtn = document.getElementById('action-hire-btn');
         const actionFireBtn = document.getElementById('action-fire-btn');
         const endDayBtn = document.getElementById('end-day-btn');
@@ -315,34 +316,41 @@
             train: 750, // Per staff
             refurbish: 5000,
             repair: 2500,
-            supplies: 5000, // New: Cost to restock supplies
+            supplies: 5000,
             hire: 250, // Upfront per staff
             fire: 0
         };
 
-        const INITIAL_CAPITAL = 100000; // Increased starting money for Seattle realism
-        const DAILY_OVERHEAD = 100; // Daily cost for utilities, etc.
-        const STAFF_DAILY_SALARY = 200; // Daily salary per staff member
-        const REVENUE_PER_CUSTOMER = 7; // Average revenue per customer
+        const INITIAL_CAPITAL = 100000;
+        const DAILY_OVERHEAD = 100;
+        const STAFF_DAILY_SALARY = 200;
+        const REVENUE_PER_CUSTOMER = 7;
 
         // --- Core Game Logic ---
 
         function initializeGame() {
+            // Prompt for player name at the very beginning
+            let playerName = prompt("Welcome, aspiring Coffee Tycoon! What's your name?");
+            if (!playerName || playerName.trim() === '') {
+                playerName = "Anonymous Tycoon"; // Default name if no input
+            }
+
             gameState = {
+                playerName: playerName.trim(), // Store player's name
                 day: 0,
-                money: INITIAL_CAPITAL, // Starting money
+                money: INITIAL_CAPITAL,
                 customers: 0,
-                reputation: 50, // Out of 100
+                reputation: 50,
                 staff: 0,
-                machineHealth: 100, // Out of 100
-                supplies: 100, // New: Supplies level (out of 100)
+                machineHealth: 100,
+                supplies: 100,
                 totalCustomersServed: 0,
                 businessPlan: {
                     location: null,
                     menu: null,
                     staffCount: 0,
                 },
-                logs: [], // Store daily log messages
+                logs: [],
             };
 
             planningState = {
@@ -353,8 +361,8 @@
 
             planningStep = 0;
             updateUpfrontCost();
-            startingMoneyDisplay.textContent = INITIAL_CAPITAL.toLocaleString(); // Display initial capital
-            renderPlanningPhase(1); // Start planning phase at step 1
+            startingMoneyDisplay.textContent = INITIAL_CAPITAL.toLocaleString();
+            renderPlanningPhase(1);
             hideAllScreens();
             planningPhase.classList.remove('hidden');
         }
@@ -364,7 +372,7 @@
             if (planningState.selectedMenu) {
                 cost += planningState.selectedMenu.cost;
             }
-            cost += planningState.staffCount * serviceCosts.hire; // Initial hiring cost for staff
+            cost += planningState.staffCount * serviceCosts.hire;
             upfrontCostDisplay.textContent = cost.toLocaleString();
         }
 
@@ -373,7 +381,6 @@
             planningStepText.textContent = step;
             document.querySelectorAll('.planning-step').forEach(el => el.classList.add('hidden'));
 
-            // Hide all back buttons by default, then show specific ones
             backStep1Btn.classList.add('hidden');
             backStep2Btn.classList.add('hidden');
             backStep3Btn.classList.add('hidden');
@@ -384,12 +391,12 @@
                 nextStep1Btn.disabled = !planningState.selectedLocation;
             } else if (step === 2) {
                 planningStep2.classList.remove('hidden');
-                backStep2Btn.classList.remove('hidden'); // Show back button for step 2
+                backStep2Btn.classList.remove('hidden');
                 renderMenuOptions();
                 nextStep2Btn.disabled = !planningState.selectedMenu;
             } else if (step === 3) {
                 planningStep3.classList.remove('hidden');
-                backStep3Btn.classList.remove('hidden'); // Show back button for step 3
+                backStep3Btn.classList.remove('hidden');
                 staffCountInput.value = planningState.staffCount;
             }
         }
@@ -406,7 +413,7 @@
                 div.onclick = () => {
                     planningState.selectedLocation = loc;
                     updateUpfrontCost();
-                    renderLocationOptions(); // Re-render to show selection
+                    renderLocationOptions();
                     nextStep1Btn.disabled = false;
                 };
                 locationOptions.appendChild(div);
@@ -425,7 +432,7 @@
                 div.onclick = () => {
                     planningState.selectedMenu = menu;
                     updateUpfrontCost();
-                    renderMenuOptions(); // Re-render to show selection
+                    renderMenuOptions();
                     nextStep2Btn.disabled = false;
                 };
                 menuOptions.appendChild(div);
@@ -452,16 +459,16 @@
                 return;
             }
 
-            gameState.money = INITIAL_CAPITAL - upfrontCost; // Deduct upfront cost from starting money
+            gameState.money = INITIAL_CAPITAL - upfrontCost;
             gameState.businessPlan.location = planningState.selectedLocation;
             gameState.businessPlan.menu = planningState.selectedMenu;
             gameState.businessPlan.staffCount = planningState.staffCount;
-            gameState.staff = planningState.staffCount; // Set initial staff
-            gameState.customers = 0; // Reset customers for fresh start
-            gameState.day = 0; // Reset day to 0, it increments to 1 on first loop
+            gameState.staff = planningState.staffCount;
+            gameState.customers = 0;
+            gameState.day = 0;
 
             addLog("Your coffee shop is ready to open!", 'setup', 'text-green-600');
-            startDay(); // Start the first day of operations
+            startDay();
         }
 
         function startDay() {
@@ -474,50 +481,39 @@
         }
 
         function gameLoop() {
-            // Daily expenses (Rent + Staff Salaries + Overhead)
             const dailyRent = gameState.businessPlan.location.rent;
             const staffSalaries = gameState.staff * STAFF_DAILY_SALARY;
-            const dailyExpenses = dailyRent + staffSalaries + DAILY_OVERHEAD; // Add daily overhead
+            const dailyExpenses = dailyRent + staffSalaries + DAILY_OVERHEAD;
 
             gameState.money -= dailyExpenses;
             addLog(`Daily expenses: Rent ($${dailyRent.toLocaleString()}), Staff Salaries ($${staffSalaries.toLocaleString()}), Overhead ($${DAILY_OVERHEAD.toLocaleString()}). Total: -$${dailyExpenses.toLocaleString()}.`, 'daily');
 
-            // Customer generation logic
-            const baseTraffic = (gameState.customers === 0 ? 100 : gameState.customers); // Default to 100 if no customers for very first day
+            const baseTraffic = (gameState.customers === 0 ? 100 : gameState.customers);
             let dailyTraffic = baseTraffic * gameState.businessPlan.location.customerTraffic;
 
-            // Adjust traffic based on reputation
             dailyTraffic *= (gameState.reputation / 100);
-
-            // Adjust traffic based on competition (higher competition = lower traffic)
-            dailyTraffic *= (1 - (gameState.businessPlan.location.competition / 10)); // Competition is 1-10
-
-            // Adjust traffic based on menu quality
+            dailyTraffic *= (1 - (gameState.businessPlan.location.competition / 10));
             dailyTraffic *= gameState.businessPlan.menu.quality;
 
-            // Reduce customers if machine health is low
             if (gameState.machineHealth < 25) {
-                dailyTraffic *= 0.5; // Halve traffic if machine health is very low
+                dailyTraffic *= 0.5;
                 addLog("Coffee machine is severely broken, losing customers!", 'daily', 'text-red-500');
             } else if (gameState.machineHealth < 50) {
-                dailyTraffic *= 0.8; // 20% reduction
+                dailyTraffic *= 0.8;
                 addLog("Coffee machine needs attention, customer traffic slightly reduced.", 'daily', 'text-orange-500');
             }
 
-            // Reduce customers if supplies are low
             if (gameState.supplies < 20) {
-                dailyTraffic *= 0.6; // 40% reduction if supplies are critical
+                dailyTraffic *= 0.6;
                 addLog("Running critically low on supplies! Customers are turning away.", 'daily', 'text-red-500');
             } else if (gameState.supplies < 50) {
-                dailyTraffic *= 0.9; // 10% reduction
+                dailyTraffic *= 0.9;
                 addLog("Supplies are running low, affecting customer experience.", 'daily', 'text-orange-500');
             }
 
+            dailyTraffic = Math.max(0, Math.floor(dailyTraffic));
 
-            dailyTraffic = Math.max(0, Math.floor(dailyTraffic)); // Ensure non-negative integer
-
-            // Simulate customer serving (simplified: everyone who visits buys)
-            let customersServedToday = Math.min(dailyTraffic, gameState.staff * 100); // Staff can serve up to 100 customers each
+            let customersServedToday = Math.min(dailyTraffic, gameState.staff * 100);
             addLog(`Attempting to serve ${dailyTraffic} customers. Staff can serve ${gameState.staff * 100}.`, 'debug');
 
             if (customersServedToday < dailyTraffic) {
@@ -526,60 +522,49 @@
                 addLog(`You served ${customersServedToday} customers today!`, 'daily', 'text-green-500');
             }
 
-            // Money earned
-            const moneyEarned = customersServedToday * REVENUE_PER_CUSTOMER; // Revenue per customer
+            const moneyEarned = customersServedToday * REVENUE_PER_CUSTOMER;
             gameState.money += moneyEarned;
             addLog(`Earned $${moneyEarned.toLocaleString()} from sales.`, 'daily', 'text-green-600');
 
-            // Update total customers served
             gameState.totalCustomersServed += customersServedToday;
 
-            // --- Daily Resource Consumption / Changes ---
-            // Supplies consumption
-            gameState.supplies -= Math.ceil(customersServedToday / 10); // 1 unit of supplies per 10 customers
-            gameState.supplies = Math.max(0, gameState.supplies); // Supplies can't go below 0
+            gameState.supplies -= Math.ceil(customersServedToday / 10);
+            gameState.supplies = Math.max(0, gameState.supplies);
 
-            // Reputation changes
             let reputationChange = 0;
             if (customersServedToday > 0) {
-                // If more customers were attempted to serve than served (due to staff/machine/supply limits)
                 if (customersServedToday < dailyTraffic) {
-                    reputationChange -= 2; // Lose reputation for poor service
+                    reputationChange -= 2;
                 } else {
-                    reputationChange += 1; // Gain reputation for good service
+                    reputationChange += 1;
                 }
-            } else { // No customers served
-                reputationChange -= 5; // Lose reputation for no business
+            } else {
+                reputationChange -= 5;
             }
 
-            // Factor in menu quality to reputation change
-            reputationChange += (gameState.businessPlan.menu.quality - 1) * 2; // e.g., quality 1.2 gives +0.4, 0.8 gives -0.4
+            reputationChange += (gameState.businessPlan.menu.quality - 1) * 2;
 
-            // Random events (e.g., machine wear, reputation fluctuation)
-            if (Math.random() < 0.2) { // 20% chance of machine wear
-                gameState.machineHealth -= Math.floor(Math.random() * 10) + 5; // Lose 5-15 health
+            if (Math.random() < 0.2) {
+                gameState.machineHealth -= Math.floor(Math.random() * 10) + 5;
                 addLog("Coffee machine shows signs of wear and tear.", 'daily', 'text-red-400');
             }
-            gameState.machineHealth = Math.max(0, gameState.machineHealth); // Machine health can't go below 0
+            gameState.machineHealth = Math.max(0, gameState.machineHealth);
 
             gameState.reputation = Math.max(0, Math.min(100, gameState.reputation + reputationChange));
             addLog(`Reputation changed by ${reputationChange}. Current Reputation: ${gameState.reputation}/100.`, 'daily');
 
-            // Customer base growth/shrinkage
             if (gameState.reputation > 70 && customersServedToday > 50 && gameState.supplies > 30) {
-                gameState.customers = Math.floor(gameState.customers * 1.05) + Math.floor(customersServedToday * 0.1); // Grow customers
+                gameState.customers = Math.floor(gameState.customers * 1.05) + Math.floor(customersServedToday * 0.1);
                 addLog("Customers growing due to good reputation and service!", 'daily', 'text-green-600');
             } else if (gameState.reputation < 30 || gameState.supplies === 0) {
-                gameState.customers = Math.floor(gameState.customers * 0.9); // Lose customers
+                gameState.customers = Math.floor(gameState.customers * 0.9);
                 addLog("Customers leaving due to poor reputation or lack of supplies!", 'daily', 'text-red-600');
             } else {
-                // Keep customers relatively stable, or slight growth if doing okay
-                gameState.customers += Math.floor(customersServedToday * 0.02); // Small organic growth
+                gameState.customers += Math.floor(customersServedToday * 0.02);
             }
-            gameState.customers = Math.max(0, gameState.customers); // Customers can't go below 0
+            gameState.customers = Math.max(0, gameState.customers);
 
-            // Check for game over conditions
-            if (gameState.money < 0 && gameState.day > 1) { // Allow negative money on day 1 if starting with just enough
+            if (gameState.money < 0 && gameState.day > 1) {
                 endGame("You ran out of money and couldn't pay your bills!");
                 return;
             }
@@ -591,7 +576,7 @@
                  endGame("Your reputation plummeted, and customers abandoned your shop!");
                  return;
             }
-            if (gameState.customers === 0 && gameState.day > 1 && gameState.money < 5000) { // If no customers AND not enough money to market
+            if (gameState.customers === 0 && gameState.day > 1 && gameState.money < 5000) {
                 endGame("You have no customers left and no money to bring them back!");
                 return;
             }
@@ -604,13 +589,13 @@
         }
 
         function updateUI() {
+            playerNameDisplay.textContent = gameState.playerName; // Update player name display
             moneyDisplay.textContent = gameState.money.toLocaleString();
             dayCounterDisplay.textContent = gameState.day;
             customersDisplay.textContent = gameState.customers.toLocaleString();
             reputationDisplay.textContent = gameState.reputation.toFixed(0);
             staffDisplay.textContent = gameState.staff;
 
-            // Machine Health Bar
             const healthPercentage = gameState.machineHealth;
             machineHealthBar.style.width = `${healthPercentage}%`;
             if (healthPercentage > 75) {
@@ -624,7 +609,6 @@
             }
             machineHealthText.textContent = `${healthPercentage.toFixed(0)}%`;
 
-            // Supplies Bar (New)
             const suppliesPercentage = gameState.supplies;
             suppliesBar.style.width = `${suppliesPercentage}%`;
             if (suppliesPercentage > 75) {
@@ -639,12 +623,11 @@
             suppliesText.textContent = `${suppliesPercentage.toFixed(0)}%`;
 
 
-            // Update action button states
             actionMarketBtn.disabled = gameState.money < serviceCosts.market;
             actionTrainBtn.disabled = gameState.money < (serviceCosts.train * gameState.staff);
             actionRefurbishBtn.disabled = gameState.money < serviceCosts.refurbish;
             actionRepairBtn.disabled = gameState.money < serviceCosts.repair;
-            actionSuppliesBtn.disabled = gameState.money < serviceCosts.supplies || gameState.supplies === 100; // New
+            actionSuppliesBtn.disabled = gameState.money < serviceCosts.supplies || gameState.supplies === 100;
             actionHireBtn.disabled = gameState.money < serviceCosts.hire || gameState.staff >= 10;
             actionFireBtn.disabled = gameState.staff <= 2;
 
@@ -658,37 +641,35 @@
             p.textContent = `[Day ${gameState.day}] ${message}`;
             p.className = `mb-1 ${className}`;
             dailyLog.appendChild(p);
-            dailyLog.scrollTop = dailyLog.scrollHeight; // Auto-scroll to bottom
+            dailyLog.scrollTop = dailyLog.scrollHeight;
         }
 
         function showMessage(title, message) {
-            alert(`${title}\n\n${message}`); // Simple alert for now
+            alert(`${title}\n\n${message}`);
         }
 
         function renderOperationsPhase() {
-            // Clear previous logs
             dailyLog.innerHTML = '';
-            // Re-add logs up to current day
             gameState.logs.filter(log => log.day <= gameState.day).forEach(logEntry => {
                 const p = document.createElement('p');
                 p.textContent = `[Day ${logEntry.day}] ${logEntry.message}`;
                 p.className = `mb-1 ${logEntry.className}`;
                 dailyLog.appendChild(p);
             });
-            dailyLog.scrollTop = dailyLog.scrollHeight; // Auto-scroll to bottom
+            dailyLog.scrollTop = dailyLog.scrollHeight;
 
             updateUI();
         }
 
         function endGame(reason) {
-            clearInterval(gameInterval); // Stop the game loop
+            clearInterval(gameInterval);
             gameOverReason.textContent = reason;
             finalDaysDisplay.textContent = gameState.day;
             finalMoneyDisplay.textContent = gameState.money.toLocaleString();
             finalCustomersServedDisplay.textContent = gameState.totalCustomersServed.toLocaleString();
             hideAllScreens();
             gameOverScreen.classList.remove('hidden');
-            saveHighScore(gameState.day, gameState.totalCustomersServed);
+            saveHighScore(gameState.playerName, gameState.day, gameState.totalCustomersServed); // Pass player name
             fetchHighScores();
         }
 
@@ -702,29 +683,24 @@
         // --- Firebase High Score Functions ---
         const highScoresCollection = db.collection(`artifacts/${firebaseConfig.appId}/public/data/highScores`);
 
-        async function saveHighScore(daysSurvived, customersServed) {
+        async function saveHighScore(playerName, daysSurvived, customersServed) { // Updated to accept playerName
             if (!currentUserId) {
                 console.warn("User not authenticated, skipping high score save.");
                 addLog("Could not save high score: Not authenticated.", 'error', 'text-red-500');
                 return;
             }
 
-            const playerName = prompt("Game Over! Enter your name for the high score list:");
-            if (!playerName) {
-                addLog("High score not saved (no name entered).", 'error', 'text-red-500');
-                return;
-            }
-
+            // No longer prompt for name here, use the one from gameState
             try {
                 await highScoresCollection.add({
-                    playerName: playerName,
+                    playerName: playerName, // Use the already collected player name
                     days: daysSurvived,
                     customers: customersServed,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                    userId: currentUserId, // Store user ID
+                    userId: currentUserId,
                 });
                 addLog("High score saved successfully!", 'system', 'text-green-700');
-                fetchHighScores(); // Refresh high scores
+                fetchHighScores();
             } catch (error) {
                 console.error("Error saving high score:", error);
                 addLog(`Error saving high score: ${error.message}`, 'error', 'text-red-500');
@@ -734,7 +710,6 @@
         async function fetchHighScores() {
             highScoresList.innerHTML = '<p class="text-gray-500">Loading high scores...</p>';
             try {
-                // Order by days (descending), then customers (descending), then player name (ascending)
                 const snapshot = await highScoresCollection.orderBy('days', 'desc').orderBy('customers', 'desc').orderBy('playerName', 'asc').limit(10).get();
                 if (snapshot.empty) {
                     highScoresList.innerHTML = '<p class="text-gray-600">No high scores yet!</p>';
@@ -781,7 +756,7 @@
         actionMarketBtn.addEventListener('click', () => {
             if (gameState.money >= serviceCosts.market) {
                 gameState.money -= serviceCosts.market;
-                gameState.customers += Math.floor(Math.random() * 1000) + 200; // Directly adds customers
+                gameState.customers += Math.floor(Math.random() * 1000) + 200;
                 addLog(`You spent $${serviceCosts.market.toLocaleString()} on a marketing campaign and gained new customers!`, 'action', 'text-blue-600');
                 updateUI();
             } else {
@@ -805,7 +780,7 @@
             if (gameState.money >= serviceCosts.refurbish) {
                 gameState.money -= serviceCosts.refurbish;
                 gameState.reputation = Math.min(100, gameState.reputation + 15);
-                gameState.machineHealth = Math.min(100, gameState.machineHealth + 20); // Minor health boost
+                gameState.machineHealth = Math.min(100, gameState.machineHealth + 20);
                 addLog(`You spent $${serviceCosts.refurbish.toLocaleString()} refurbishing your shop. Reputation and machine health improved!`, 'action', 'text-blue-600');
                 updateUI();
             } else {
@@ -816,7 +791,7 @@
         actionRepairBtn.addEventListener('click', () => {
             if (gameState.money >= serviceCosts.repair) {
                 gameState.money -= serviceCosts.repair;
-                gameState.machineHealth = 100; // Fully repair
+                gameState.machineHealth = 100;
                 addLog(`You spent $${serviceCosts.repair.toLocaleString()} to repair your coffee machine. It's good as new!`, 'action', 'text-blue-600');
                 updateUI();
             } else {
@@ -824,11 +799,11 @@
             }
         });
 
-        actionSuppliesBtn.addEventListener('click', () => { // New Supplies Button Listener
-            if (gameState.supplies < 100) { // Only allow if not full supplies
+        actionSuppliesBtn.addEventListener('click', () => {
+            if (gameState.supplies < 100) {
                 if (gameState.money >= serviceCosts.supplies) {
                     gameState.money -= serviceCosts.supplies;
-                    gameState.supplies = 100; // Replenish to full
+                    gameState.supplies = 100;
                     addLog(`You spent $${serviceCosts.supplies.toLocaleString()} to restock supplies.`, 'action', 'text-blue-600');
                     updateUI();
                 } else {
@@ -842,7 +817,7 @@
         actionHireBtn.addEventListener('click', () => {
             if (gameState.staff < 10) {
                 if (gameState.money >= serviceCosts.hire) {
-                    gameState.money -= serviceCosts.hire; // Upfront hiring cost
+                    gameState.money -= serviceCosts.hire;
                     gameState.staff++;
                     addLog(`You hired a new staff member for $${serviceCosts.hire.toLocaleString()} upfront. Daily salary is $${STAFF_DAILY_SALARY.toLocaleString()}.`, 'action', 'text-blue-600');
                     updateUI();
@@ -857,7 +832,7 @@
         actionFireBtn.addEventListener('click', () => {
             if (gameState.staff > 2) {
                 gameState.staff--;
-                gameState.reputation = Math.max(0, gameState.reputation - 5); // Firing staff can hurt reputation
+                gameState.reputation = Math.max(0, gameState.reputation - 5);
                 addLog("You fired a staff member. Reputation slightly decreased.", 'action', 'text-orange-500');
                 updateUI();
             } else {
