@@ -31,11 +31,12 @@
             width: 0%;
             transition: width 0.5s ease-in-out;
         }
+        /* Enhanced Button Styles */
         .btn-primary {
-            @apply bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded;
+            @apply bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded shadow-md hover:shadow-lg transition-all duration-200 ease-in-out;
         }
         .btn-secondary {
-            @apply bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded;
+            @apply bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded shadow-md hover:shadow-lg transition-all duration-200 ease-in-out;
         }
         .tooltip-container {
             position: relative;
@@ -88,8 +89,8 @@
                     <h3 class="text-2xl font-bold mb-4">Step 1: Choose Your Location</h3>
                     <div id="location-options" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         </div>
-                    <div class="flex justify-end mt-6">
-                        <button id="next-step-1" class="btn-primary" disabled>Next</button>
+                    <div class="flex justify-between mt-6">
+                        <button id="back-step-1" class="btn-secondary hidden">Back</button> <button id="next-step-1" class="btn-primary" disabled>Next</button>
                     </div>
                 </div>
 
@@ -97,7 +98,8 @@
                     <h3 class="text-2xl font-bold mb-4">Step 2: Design Your Menu</h3>
                     <div id="menu-options" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         </div>
-                    <div class="flex justify-end mt-6">
+                    <div class="flex justify-between mt-6">
+                        <button id="back-step-2" class="btn-secondary">Back</button>
                         <button id="next-step-2" class="btn-primary" disabled>Next</button>
                     </div>
                 </div>
@@ -109,7 +111,8 @@
                         <input type="number" id="staffCountInput" min="2" max="10" value="2" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
                         <p class="text-sm text-gray-600">Initial hiring cost: $250 per staff. Daily salary: $200 per staff.</p>
                     </div>
-                    <div class="flex justify-end mt-6">
+                    <div class="flex justify-between mt-6">
+                        <button id="back-step-3" class="btn-secondary">Back</button>
                         <button id="next-step-3" class="btn-primary">Finalize Plan</button>
                     </div>
                 </div>
@@ -131,6 +134,13 @@
                             </div>
                             <span id="machine-health-text" class="text-sm text-gray-600"></span>
                         </div>
+                        <div class="mt-4">
+                            <h3 class="text-xl font-bold mb-2">Supplies:</h3>
+                            <div class="w-full bg-gray-200 rounded-full h-4">
+                                <div id="supplies-bar" class="bg-blue-500 h-4 rounded-full progress-bar"></div>
+                            </div>
+                            <span id="supplies-text" class="text-sm text-gray-600"></span>
+                        </div>
                     </div>
 
                     <div class="section-box">
@@ -151,6 +161,10 @@
                             <div class="tooltip-container w-full">
                                 <button id="action-repair-btn" class="btn-primary w-full">Repair Machine ($2,500)</button>
                                 <span class="tooltip-text">Fully restores coffee machine health.</span>
+                            </div>
+                            <div class="tooltip-container w-full">
+                                <button id="action-supplies-btn" class="btn-primary w-full">Get New Supplies ($5,000)</button>
+                                <span class="tooltip-text">Restock coffee beans, milk, cups, etc.</span>
                             </div>
                             <div class="tooltip-container w-full">
                                 <button id="action-hire-btn" class="btn-primary w-full">Hire Staff ($250 upfront, $200 daily salary)</button>
@@ -236,14 +250,17 @@
 
         const planningStep1 = document.getElementById('planning-step-1');
         const locationOptions = document.getElementById('location-options');
+        const backStep1Btn = document.getElementById('back-step-1');
         const nextStep1Btn = document.getElementById('next-step-1');
 
         const planningStep2 = document.getElementById('planning-step-2');
         const menuOptions = document.getElementById('menu-options');
+        const backStep2Btn = document.getElementById('back-step-2');
         const nextStep2Btn = document.getElementById('next-step-2');
 
         const planningStep3 = document.getElementById('planning-step-3');
         const staffCountInput = document.getElementById('staffCountInput');
+        const backStep3Btn = document.getElementById('back-step-3');
         const nextStep3Btn = document.getElementById('next-step-3');
 
         const dayCounterDisplay = document.getElementById('day-counter');
@@ -253,11 +270,14 @@
         const staffDisplay = document.getElementById('staff-display');
         const machineHealthBar = document.getElementById('machine-health-bar');
         const machineHealthText = document.getElementById('machine-health-text');
+        const suppliesBar = document.getElementById('supplies-bar'); // New
+        const suppliesText = document.getElementById('supplies-text'); // New
 
         const actionMarketBtn = document.getElementById('action-market-btn');
         const actionTrainBtn = document.getElementById('action-train-btn');
         const actionRefurbishBtn = document.getElementById('action-refurbish-btn');
         const actionRepairBtn = document.getElementById('action-repair-btn');
+        const actionSuppliesBtn = document.getElementById('action-supplies-btn'); // New
         const actionHireBtn = document.getElementById('action-hire-btn');
         const actionFireBtn = document.getElementById('action-fire-btn');
         const endDayBtn = document.getElementById('end-day-btn');
@@ -295,14 +315,15 @@
             train: 750, // Per staff
             refurbish: 5000,
             repair: 2500,
+            supplies: 5000, // New: Cost to restock supplies
             hire: 250, // Upfront per staff
             fire: 0
         };
 
         const INITIAL_CAPITAL = 100000; // Increased starting money for Seattle realism
-        const DAILY_OVERHEAD = 100; // New: daily cost for utilities, etc.
-        const STAFF_DAILY_SALARY = 200; // New: daily salary per staff member
-        const REVENUE_PER_CUSTOMER = 7; // New: average revenue per customer
+        const DAILY_OVERHEAD = 100; // Daily cost for utilities, etc.
+        const STAFF_DAILY_SALARY = 200; // Daily salary per staff member
+        const REVENUE_PER_CUSTOMER = 7; // Average revenue per customer
 
         // --- Core Game Logic ---
 
@@ -314,6 +335,7 @@
                 reputation: 50, // Out of 100
                 staff: 0,
                 machineHealth: 100, // Out of 100
+                supplies: 100, // New: Supplies level (out of 100)
                 totalCustomersServed: 0,
                 businessPlan: {
                     location: null,
@@ -351,16 +373,23 @@
             planningStepText.textContent = step;
             document.querySelectorAll('.planning-step').forEach(el => el.classList.add('hidden'));
 
+            // Hide all back buttons by default, then show specific ones
+            backStep1Btn.classList.add('hidden');
+            backStep2Btn.classList.add('hidden');
+            backStep3Btn.classList.add('hidden');
+
             if (step === 1) {
                 planningStep1.classList.remove('hidden');
                 renderLocationOptions();
                 nextStep1Btn.disabled = !planningState.selectedLocation;
             } else if (step === 2) {
                 planningStep2.classList.remove('hidden');
+                backStep2Btn.classList.remove('hidden'); // Show back button for step 2
                 renderMenuOptions();
                 nextStep2Btn.disabled = !planningState.selectedMenu;
             } else if (step === 3) {
                 planningStep3.classList.remove('hidden');
+                backStep3Btn.classList.remove('hidden'); // Show back button for step 3
                 staffCountInput.value = planningState.staffCount;
             }
         }
@@ -475,6 +504,16 @@
                 addLog("Coffee machine needs attention, customer traffic slightly reduced.", 'daily', 'text-orange-500');
             }
 
+            // Reduce customers if supplies are low
+            if (gameState.supplies < 20) {
+                dailyTraffic *= 0.6; // 40% reduction if supplies are critical
+                addLog("Running critically low on supplies! Customers are turning away.", 'daily', 'text-red-500');
+            } else if (gameState.supplies < 50) {
+                dailyTraffic *= 0.9; // 10% reduction
+                addLog("Supplies are running low, affecting customer experience.", 'daily', 'text-orange-500');
+            }
+
+
             dailyTraffic = Math.max(0, Math.floor(dailyTraffic)); // Ensure non-negative integer
 
             // Simulate customer serving (simplified: everyone who visits buys)
@@ -495,10 +534,15 @@
             // Update total customers served
             gameState.totalCustomersServed += customersServedToday;
 
+            // --- Daily Resource Consumption / Changes ---
+            // Supplies consumption
+            gameState.supplies -= Math.ceil(customersServedToday / 10); // 1 unit of supplies per 10 customers
+            gameState.supplies = Math.max(0, gameState.supplies); // Supplies can't go below 0
+
             // Reputation changes
             let reputationChange = 0;
             if (customersServedToday > 0) {
-                // If more customers were attempted to serve than served (due to staff/machine limits)
+                // If more customers were attempted to serve than served (due to staff/machine/supply limits)
                 if (customersServedToday < dailyTraffic) {
                     reputationChange -= 2; // Lose reputation for poor service
                 } else {
@@ -512,7 +556,7 @@
             reputationChange += (gameState.businessPlan.menu.quality - 1) * 2; // e.g., quality 1.2 gives +0.4, 0.8 gives -0.4
 
             // Random events (e.g., machine wear, reputation fluctuation)
-            if (Math.random() < 0.2) { // 20% chance of machine wear or slight reputation change
+            if (Math.random() < 0.2) { // 20% chance of machine wear
                 gameState.machineHealth -= Math.floor(Math.random() * 10) + 5; // Lose 5-15 health
                 addLog("Coffee machine shows signs of wear and tear.", 'daily', 'text-red-400');
             }
@@ -522,12 +566,12 @@
             addLog(`Reputation changed by ${reputationChange}. Current Reputation: ${gameState.reputation}/100.`, 'daily');
 
             // Customer base growth/shrinkage
-            if (gameState.reputation > 70 && customersServedToday > 50) {
+            if (gameState.reputation > 70 && customersServedToday > 50 && gameState.supplies > 30) {
                 gameState.customers = Math.floor(gameState.customers * 1.05) + Math.floor(customersServedToday * 0.1); // Grow customers
                 addLog("Customers growing due to good reputation and service!", 'daily', 'text-green-600');
-            } else if (gameState.reputation < 30) {
+            } else if (gameState.reputation < 30 || gameState.supplies === 0) {
                 gameState.customers = Math.floor(gameState.customers * 0.9); // Lose customers
-                addLog("Customers leaving due to poor reputation!", 'daily', 'text-red-600');
+                addLog("Customers leaving due to poor reputation or lack of supplies!", 'daily', 'text-red-600');
             } else {
                 // Keep customers relatively stable, or slight growth if doing okay
                 gameState.customers += Math.floor(customersServedToday * 0.02); // Small organic growth
@@ -547,8 +591,12 @@
                  endGame("Your reputation plummeted, and customers abandoned your shop!");
                  return;
             }
-            if (gameState.customers === 0 && gameState.day > 1 && gameState.money < 5000) { // If no customers AND not enough money to market/recover
+            if (gameState.customers === 0 && gameState.day > 1 && gameState.money < 5000) { // If no customers AND not enough money to market
                 endGame("You have no customers left and no money to bring them back!");
+                return;
+            }
+            if (gameState.supplies === 0 && gameState.day > 1) {
+                endGame("You ran out of supplies and had to close your doors!");
                 return;
             }
 
@@ -576,11 +624,27 @@
             }
             machineHealthText.textContent = `${healthPercentage.toFixed(0)}%`;
 
+            // Supplies Bar (New)
+            const suppliesPercentage = gameState.supplies;
+            suppliesBar.style.width = `${suppliesPercentage}%`;
+            if (suppliesPercentage > 75) {
+                suppliesBar.className = 'bg-blue-500 h-4 rounded-full progress-bar';
+            } else if (suppliesPercentage > 50) {
+                suppliesBar.className = 'bg-teal-500 h-4 rounded-full progress-bar';
+            } else if (suppliesPercentage > 20) {
+                suppliesBar.className = 'bg-yellow-500 h-4 rounded-full progress-bar';
+            } else {
+                suppliesBar.className = 'bg-red-500 h-4 rounded-full progress-bar';
+            }
+            suppliesText.textContent = `${suppliesPercentage.toFixed(0)}%`;
+
+
             // Update action button states
             actionMarketBtn.disabled = gameState.money < serviceCosts.market;
-            actionTrainBtn.disabled = gameState.money < (serviceCosts.train * gameState.staff); // Training cost based on staff count
+            actionTrainBtn.disabled = gameState.money < (serviceCosts.train * gameState.staff);
             actionRefurbishBtn.disabled = gameState.money < serviceCosts.refurbish;
             actionRepairBtn.disabled = gameState.money < serviceCosts.repair;
+            actionSuppliesBtn.disabled = gameState.money < serviceCosts.supplies || gameState.supplies === 100; // New
             actionHireBtn.disabled = gameState.money < serviceCosts.hire || gameState.staff >= 10;
             actionFireBtn.disabled = gameState.staff <= 2;
 
@@ -697,8 +761,11 @@
         startGameBtn.addEventListener('click', initializeGame);
         restartGameBtn.addEventListener('click', initializeGame);
 
+        // Planning Phase Navigation
         nextStep1Btn.addEventListener('click', () => renderPlanningPhase(2));
+        backStep2Btn.addEventListener('click', () => renderPlanningPhase(1));
         nextStep2Btn.addEventListener('click', () => renderPlanningPhase(3));
+        backStep3Btn.addEventListener('click', () => renderPlanningPhase(2));
         nextStep3Btn.addEventListener('click', handlePlanFinalization);
 
         staffCountInput.addEventListener('input', () => {
@@ -754,6 +821,21 @@
                 updateUI();
             } else {
                 showMessage("Not Enough Money", `You need $${serviceCosts.repair.toLocaleString()} to repair your machine.`);
+            }
+        });
+
+        actionSuppliesBtn.addEventListener('click', () => { // New Supplies Button Listener
+            if (gameState.supplies < 100) { // Only allow if not full supplies
+                if (gameState.money >= serviceCosts.supplies) {
+                    gameState.money -= serviceCosts.supplies;
+                    gameState.supplies = 100; // Replenish to full
+                    addLog(`You spent $${serviceCosts.supplies.toLocaleString()} to restock supplies.`, 'action', 'text-blue-600');
+                    updateUI();
+                } else {
+                    showMessage("Not Enough Money", `You need $${serviceCosts.supplies.toLocaleString()} to get new supplies.`);
+                }
+            } else {
+                showMessage("Supplies Full", "Your supplies are already at 100%. No need to restock yet.");
             }
         });
 
